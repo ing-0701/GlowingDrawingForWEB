@@ -23,22 +23,11 @@ public:
 	void dragEvent(ofDragInfo dragInfo);
 	void gotMessage(ofMessage msg);
 
-	const static int mainWidth = 1000;
-	const static int mainHeight = 1000;
+	const static int mainWidth = 800;
+	const static int mainHeight = 600;
 
 	PaintTool paintTool = PaintTool(mainWidth, mainHeight);
 	ofPixels pixels;
-	vector<float> brightness;
-
-	ofFbo fbo3D;
-
-	ofEasyCam cam;
-	ofMesh mesh;
-	ofMesh mesh2D;
-	ofPlanePrimitive plane;
-
-	ofLight light1;
-	ofLight light2;
 
 	Ui ui;
 	ofColor backgroundColor;

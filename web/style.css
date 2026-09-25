@@ -1,7 +1,11 @@
 body {
   font-family: helvetica, sans-serif;
   margin: 0;
-  padding: none;
+  padding: 0;
+}
+
+#engine-content {
+  display:flow-root;
 }
 
 .emscripten {
@@ -15,8 +19,10 @@ div.emscripten {
   text-align: center;
 }
 
-div.emscripten_border {
-  border: 1px solid black;
+div.emscripten_border{
+  width:fit-content;
+  margin: 0 auto;
+  border: 1px solid #888;
 }
 
 /* The canvas must not have any border or padding, or mouse coords will be wrong */

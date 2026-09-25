@@ -6,7 +6,7 @@ PaintTool::PaintTool(int mainWidth, int mainHeight) {
 
 	ofFbo::Settings s;
 	s.width = mainWidth;
-	s.height = ofGetHeight() / 2;
+	s.height = mainHeight;
 	s.internalformat = GL_RGBA32F;
 
 	fbo2D.allocate(s);
@@ -59,7 +59,7 @@ void PaintTool::drawLine(bool penSwitch, float eraserAlpha) {
 void PaintTool::drawCanvas(int mainWidth, int mainHeight) {
 	ofSetColor(255, 255, 255, 255);
 	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	fbo2D.draw(0, mainHeight / 2, mainWidth, mainHeight / 2);
+	fbo2D.draw(0, 0, mainWidth, mainHeight);
 	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	preFbo.draw(0, mainHeight / 2, mainWidth, mainHeight / 2);
+	preFbo.draw(0, 0, mainWidth, mainHeight);
 }
