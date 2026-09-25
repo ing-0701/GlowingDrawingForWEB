@@ -25,7 +25,7 @@ OF_ROOT = /home/ing/programing/openFrameworks
 #       (default) PROJECT_ROOT = . (this directory)
 #    
 ################################################################################
-# PROJECT_ROOT = .
+PROJECT_ROOT = .
 
 ################################################################################
 # PROJECT SPECIFIC CHECKS
@@ -155,3 +155,7 @@ OF_ROOT = /home/ing/programing/openFrameworks
 ################################################################################
 # PROJECT_CXX = 
 # PROJECT_CC = 
+
+PROJECT_EMSCRIPTEN_TEMPLATE = $(PROJECT_ROOT)/web/template.html
+override EMSCRIPTEN_JS = $(PROJECT_ROOT)/web/app.js
+override EMSCRIPTEN_CSS = $(PROJECT_ROOT)/web/style.css

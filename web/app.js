@@ -117,20 +117,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   };
 
-  const fullscreenButton = document.getElementById('fullscreenButton');
+  // const fullscreenButton = document.getElementById('fullscreenButton');
 
-  // Attach the event listener to handle fullscreen functionality
-  fullscreenButton.addEventListener('click', () => {
-    const pointerLock = document.getElementById('pointerLock').checked;
-    const resize = document.getElementById('resize').checked;
+  // // Attach the event listener to handle fullscreen functionality
+  // fullscreenButton.addEventListener('click', () => {
+  //   const pointerLock = document.getElementById('pointerLock').checked;
+  //   const resize = document.getElementById('resize').checked;
 
-    // Ensure `Module.requestFullscreen` is available before calling it
-    if (typeof Module.requestFullscreen === 'function') {
-      Module.requestFullscreen(pointerLock, resize);
-    } else {
-      console.error('Module.requestFullscreen is not defined.');
-    }
-  });
+  //   // Ensure `Module.requestFullscreen` is available before calling it
+  //   if (typeof Module.requestFullscreen === 'function') {
+  //     Module.requestFullscreen(pointerLock, resize);
+  //   } else {
+  //     console.error('Module.requestFullscreen is not defined.');
+  //   }
+  // });
 // });
 
 

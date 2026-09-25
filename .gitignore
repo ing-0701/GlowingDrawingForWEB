@@ -13,3 +13,7 @@ x86/
 # OS
 .DS_Store
 Thumbs.db
+
+# Web build outputs
+/bin/em/
+/frontend/public/engine/
