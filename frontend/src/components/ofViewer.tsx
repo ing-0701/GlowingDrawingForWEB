@@ -2,10 +2,12 @@ import { useRef, useState } from 'react'
 
 type PaintWindow = Window & {
     paintBackgroundBrightness?: number
+    paintPenMode?: boolean
 }
 
 export default function OfViewer() {
     const [brightness, setBrightness] = useState(255)
+    const [isPen, setIsPen] = useState(true)
 
     const iframeRef = useRef<HTMLIFrameElement>(null)
 
@@ -14,6 +16,14 @@ export default function OfViewer() {
 
         if (paintWindow) {
             (paintWindow as PaintWindow).paintBackgroundBrightness = value
+        }
+    }
+
+    function sendPenMode(value: boolean) {
+        const paintWindow = iframeRef.current?.contentWindow
+
+        if (paintWindow) {
+            (paintWindow as PaintWindow).paintPenMode = value
         }
     }
 
@@ -35,6 +45,20 @@ export default function OfViewer() {
                 />
             </label>
 
+            <button
+                type="button"
+                onClick={() => {
+                    const nextIsPen = !isPen
+                    setIsPen(nextIsPen)
+                    sendPenMode(nextIsPen)
+                }}
+            >
+                {isPen
+                    ? '現在：ペン（消しゴムに切り替える）'
+                    : '現在：消しゴム（ペンに切り替える）'
+                }
+            </button>
+
             <iframe
                 ref={iframeRef}
                 title="openFrameworksのペイント画面"
@@ -44,6 +68,7 @@ export default function OfViewer() {
                     const iframe = event.currentTarget;
 
                     sendBrightness(brightness);
+                    sendPenMode(isPen);
 
                     const content =
                         iframe.contentDocument?.getElementById('engine-content');

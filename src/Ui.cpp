@@ -15,10 +15,11 @@ Ui::Ui() {
 	eraserSize.setSize(256, 30);
 	eraserAlpha.setup("eraserAlpha", 1.0, 0.0, 1.0);
 	eraserAlpha.setSize(256, 30);
-	image3D.setup("3Dimage", 0.0, 0.0, 1.0);
-	image3D.setSize(256, 30);
+
+#ifndef __EMSCRIPTEN__
 	penSwitch.setup("pen/eraser", true);
 	penSwitch.setSize(100, 30);
+#endif // !__EMSCRIPTEN__
 
 	ofFbo::Settings s;
 	s.width = 256;
@@ -82,27 +83,31 @@ void Ui::picking(int x, int y, int mainWidth) {
 	pickedColor = ofColor(nowColor);
 }
 
-void Ui::placeUi(int mainWidth) {
+void Ui::placeUi(int mainWidth, bool isPen) {
 	hue.setPosition(mainWidth, 258 + 32 * 0);
 	penSize.setPosition(mainWidth, 258 + 32 * 1);
 	penAlpha.setPosition(mainWidth, 258 + 32 * 2);
 	eraserSize.setPosition(mainWidth, 258 + 32 * 1);
 	eraserAlpha.setPosition(mainWidth, 258 + 32 * 2);
-	image3D.setPosition(mainWidth, 258 + 32 * 3);
-	penSwitch.setPosition(mainWidth, 258 + 32 * 4);
 
-	if (penSwitch) {
+#ifndef __EMSCRIPTEN__
+	penSwitch.setPosition(mainWidth, 258 + 32 * 4);
+#endif // __EMSCRIPTEN__
+
+
+	if (isPen) {
 		hue.draw();
 		penSize.draw();
 		penAlpha.draw();
-		image3D.draw();
-		penSwitch.draw();
 	} else {
 		hue.draw();
 		eraserSize.draw();
 		eraserAlpha.draw();
-		image3D.draw();
-		penSwitch.draw();
 	}
+
+#ifndef __EMSCRIPTEN__
+	penSwitch.draw();
+#endif // __EMSCRIPTEN__
+
 	
 }
