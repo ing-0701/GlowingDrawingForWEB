@@ -33,6 +33,7 @@ void ofApp::setup() {
 
 	//ofSetLineWidth(10);
 	paintTool.color = ofColor(0, 0, 0, 255);
+	ui.deleteAll.addListener(&paintTool, &PaintTool::deleteAll);
 }
 
 //--------------------------------------------------------------
@@ -153,4 +154,9 @@ void ofApp::gotMessage(ofMessage msg) {
 
 //--------------------------------------------------------------
 void ofApp::dragEvent(ofDragInfo dragInfo) {
+}
+
+//--------------------------------------------------------------
+void ofApp::exit() {
+	ui.deleteAll.removeListener(&paintTool, &PaintTool::deleteAll);
 }

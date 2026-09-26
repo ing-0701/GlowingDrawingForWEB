@@ -63,3 +63,9 @@ void PaintTool::drawCanvas(int mainWidth, int mainHeight) {
 	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	preFbo.draw(0, 0, mainWidth, mainHeight);
 }
+
+void PaintTool::deleteAll() {
+	fbo2D.begin();
+	ofClear(0, 0, 0, 0);
+	fbo2D.end();
+}

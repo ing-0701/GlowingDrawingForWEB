@@ -17,6 +17,7 @@ public:
 	void drawLine(bool penSwith, float eraserAlpha);
 	void saveLine();
 	void drawCanvas(int mainWidth, int mainHeight);
+	void deleteAll();
 
 	float strokeSize;
 };
