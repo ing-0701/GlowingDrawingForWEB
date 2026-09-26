@@ -10,7 +10,6 @@ public:
 	ofxFloatSlider penAlpha;
 	ofxFloatSlider eraserSize;
 	ofxFloatSlider eraserAlpha;
-	ofxFloatSlider image3D;
 	ofxToggle penSwitch;
 	ofFbo pickerFbo;
 	ofPixels pickerPix;
@@ -21,6 +20,6 @@ public:
 	void updatePicker(int mainWidth);
 	void picking(int x, int y, int mainWidth);
 
-	void placeUi(int mainWidth);
+	void placeUi(int mainWidth, bool isPen);
 	void buttonPressed();
 };

@@ -30,5 +30,4 @@ public:
 	ofPixels pixels;
 
 	Ui ui;
-	ofColor backgroundColor;
 };

@@ -1,5 +1,23 @@
 #include "ofApp.h"
 
+#ifdef __EMSCRIPTEN__ //以下#endifまで、emscriptenでビルドするときのみ有効
+	#include <emscripten.h>
+
+EM_JS(int, getBackgroundBrightness, (), {
+	return window['paintBackgroundBrightness'] ?? 255;
+})
+
+EM_JS(int, getPenMode, (), {
+	const value = window['paintPenMode'];
+
+	if (typeof value === 'boolean') {
+		return value ? 1 : 0; 
+	}
+
+	return 1;
+})
+#endif
+
 bool modelingFlag = false;
 bool drawingFlag = false;
 bool pickerFlag = false;
@@ -10,8 +28,7 @@ void ofApp::setup() {
 	ofSetFrameRate(60);
 
 	paintTool.fbo2D.begin();
-	ofBackground(255);
-	ofClear(255, 255, 255, 255);
+	ofClear(0, 0, 0, 0);
 	paintTool.fbo2D.end();
 
 	//ofSetLineWidth(10);
@@ -24,10 +41,15 @@ void ofApp::update() {
 
 //--------------------------------------------------------------
 void ofApp::draw() {
-	backgroundColor.setHsb(ui.hue * 255, 170, 170);
-	ofBackground(backgroundColor);
+#ifdef __EMSCRIPTEN__
+	ofBackground(getBackgroundBrightness());
+	const bool isPen = getPenMode() != 0;
+#else
+	ofBackground(255);
+	const bool isPen = ui.penSwitch;
+#endif // __EMSCRIPTEN__
 
-	ui.placeUi(mainWidth);
+	ui.placeUi(mainWidth, isPen);
 	ui.updatePicker(mainWidth);
 	if (pickerFlag) {
 		ui.picking(ofGetMouseX(), ofGetMouseY(), mainWidth);
@@ -37,7 +59,7 @@ void ofApp::draw() {
 	paintTool.strokeSize = ui.penSize;
 	paintTool.color = ofColor(paintTool.color.r, paintTool.color.g, paintTool.color.b, ui.penAlpha * 255);
 
-	paintTool.drawLine(ui.penSwitch, ui.eraserAlpha * 255);
+	paintTool.drawLine(isPen, ui.eraserAlpha * 255);
 	paintTool.drawCanvas(mainWidth, mainHeight);
 }
 
