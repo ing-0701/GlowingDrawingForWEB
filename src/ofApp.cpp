@@ -1,5 +1,13 @@
 #include "ofApp.h"
 
+#ifdef __EMSCRIPTEN__ //以下#endifまで、emscriptenでビルドするときのみ有効
+	#include <emscripten.h>
+
+EM_JS(int, getBackgroundBrightness, (), {
+	return window['paintBackgroundBrightness'] ?? 255;
+})
+#endif
+
 bool modelingFlag = false;
 bool drawingFlag = false;
 bool pickerFlag = false;
@@ -10,8 +18,7 @@ void ofApp::setup() {
 	ofSetFrameRate(60);
 
 	paintTool.fbo2D.begin();
-	ofBackground(255);
-	ofClear(255, 255, 255, 255);
+	ofClear(0, 0, 0, 0);
 	paintTool.fbo2D.end();
 
 	//ofSetLineWidth(10);
@@ -24,8 +31,11 @@ void ofApp::update() {
 
 //--------------------------------------------------------------
 void ofApp::draw() {
-	backgroundColor.setHsb(ui.hue * 255, 170, 170);
-	ofBackground(backgroundColor);
+#ifdef __EMSCRIPTEN__
+	ofBackground(getBackgroundBrightness());
+#else
+	ofBackground(255);
+#endif // __EMSCRIPTEN__
 
 	ui.placeUi(mainWidth);
 	ui.updatePicker(mainWidth);
