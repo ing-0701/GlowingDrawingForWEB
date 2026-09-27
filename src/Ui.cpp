@@ -107,13 +107,6 @@ void Ui::picking(int x, int y, int mainWidth) {
 }
 
 void Ui::placeUi(int mainWidth, bool isPen) {
-	undo.setPosition(mainWidth, 258 + 32 * 5);
-	redo.setPosition(mainWidth, 258 + 32 * 6);
-	deleteAll.setPosition(mainWidth, 258 + 32 * 7);
-
-	undo.draw();
-	redo.draw();
-	deleteAll.draw();
 
 #ifndef __EMSCRIPTEN__
 	hue.setPosition(mainWidth, 258 + 32 * 0);
@@ -122,9 +115,11 @@ void Ui::placeUi(int mainWidth, bool isPen) {
 	eraserSize.setPosition(mainWidth, 258 + 32 * 1);
 	eraserAlpha.setPosition(mainWidth, 258 + 32 * 2);
 	penSwitch.setPosition(mainWidth, 258 + 32 * 4);
+	undo.setPosition(mainWidth, 258 + 32 * 5);
+	redo.setPosition(mainWidth, 258 + 32 * 6);
+	deleteAll.setPosition(mainWidth, 258 + 32 * 7);
 
 	hue.draw();
-
 	if (isPen) {
 		penSize.draw();
 		penAlpha.draw();
@@ -133,7 +128,8 @@ void Ui::placeUi(int mainWidth, bool isPen) {
 		eraserAlpha.draw();
 	}
 	penSwitch.draw();
+	undo.draw();
+	redo.draw();
+	deleteAll.draw();
 #endif // __EMSCRIPTEN__
-
-	
 }

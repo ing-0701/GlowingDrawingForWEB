@@ -32,6 +32,22 @@ EM_JS(int, getPenMode, (), {
 
 	return 1;
 })
+
+EM_JS(int, takePaintCommand, (), {
+	const commands = window['paintCommands'];
+
+	if (!commands || commands.length === 0) {
+		return 0;
+	}
+
+	const command = commands.shift();
+
+	if (command === 'undo') return 1;
+	if (command === 'redo') return 2;
+	if (command === 'deleteAll') return 3;
+
+	return 0;
+})
 #endif
 
 bool modelingFlag = false;
@@ -56,6 +72,25 @@ void ofApp::setup() {
 
 //--------------------------------------------------------------
 void ofApp::update() {
+#ifdef __EMSCRIPTEN__
+	if (drawingFlag) {
+		return;
+	}
+
+	int command = takePaintCommand();
+
+	while (command != 0) {
+		if (command == 1) {
+			paintTool.undo();
+		} else if (command == 2) {
+			paintTool.redo();
+		} else if (command == 3) {
+			paintTool.deleteAll();
+		}
+
+		command = takePaintCommand();
+	}
+#endif // __EMSCRIPTEN__
 }
 
 //--------------------------------------------------------------

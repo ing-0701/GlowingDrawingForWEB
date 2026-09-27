@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
 
+type PaintCommand = 'undo' | 'redo' | 'deleteAll'
+
 type PaintWindow = Window & {
     paintBackgroundBrightness?: number
     paintHue?: number
@@ -8,6 +10,7 @@ type PaintWindow = Window & {
     paintEraserSize?: number
     paintEraserAlpha?: number
     paintPenMode?: boolean
+    paintCommands?: PaintCommand[]
 }
 
 export default function OfViewer() {
@@ -75,6 +78,18 @@ export default function OfViewer() {
         if (paintWindow) {
             (paintWindow as PaintWindow).paintPenMode = value
         }
+    }
+
+    function sendCommand(command: PaintCommand) {
+        const paintWindow = iframeRef.current?.contentWindow as PaintWindow | null
+
+        if (!paintWindow) return
+
+        if (!paintWindow.paintCommands) {
+            paintWindow.paintCommands = []
+        }
+
+        paintWindow.paintCommands.push(command)
     }
 
     return (
@@ -188,6 +203,20 @@ export default function OfViewer() {
                     : '現在：消しゴム（ペンに切り替える）'
                 }
             </button>
+
+            <div>
+                <button type="button" onClick={() => sendCommand('undo')}>
+                    UNDO
+                </button>
+
+                <button type="button" onClick={() => sendCommand('redo')}>
+                    REDO
+                </button>
+
+                <button type="button" onClick={() => sendCommand('deleteAll')}>
+                    全消し
+                </button>
+            </div>
 
             <iframe
                 ref={iframeRef}
