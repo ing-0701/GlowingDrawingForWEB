@@ -36,10 +36,12 @@ void PaintTool::drawLine(bool penSwitch, float eraserAlpha) {
 
 	if (points.size() > 0) {
 		for (int i = 0; i < points.size(); i++) {
-			if (i == 0) {
+			if (penSwitch) {
 				glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 			} else {
-				glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+				glBlendFuncSeparate(
+					GL_ZERO, GL_ONE_MINUS_SRC_ALPHA,
+					GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
 			}
 			ofDrawCircle(points[i].x, points[i].y, strokeSize * 25);
 		}
