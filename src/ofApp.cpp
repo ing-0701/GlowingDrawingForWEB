@@ -11,7 +11,7 @@ EM_JS(int, getPenMode, (), {
 	const value = window['paintPenMode'];
 
 	if (typeof value === 'boolean') {
-		return value ? 1 : 0; 
+		return value ? 1 : 0;
 	}
 
 	return 1;
@@ -33,6 +33,8 @@ void ofApp::setup() {
 
 	//ofSetLineWidth(10);
 	paintTool.color = ofColor(0, 0, 0, 255);
+	ui.undo.addListener(&paintTool, &PaintTool::undo);
+	ui.redo.addListener(&paintTool, &PaintTool::redo);
 	ui.deleteAll.addListener(&paintTool, &PaintTool::deleteAll);
 }
 
@@ -57,7 +59,11 @@ void ofApp::draw() {
 		paintTool.color = ofColor(ui.pickedColor);
 	}
 
-	paintTool.strokeSize = ui.penSize;
+	if (isPen) {
+		paintTool.strokeSize = ui.penSize;
+	} else {
+		paintTool.strokeSize = ui.eraserSize;
+	}
 	paintTool.color = ofColor(paintTool.color.r, paintTool.color.g, paintTool.color.b, ui.penAlpha * 255);
 
 	paintTool.drawLine(isPen, ui.eraserAlpha * 255);
@@ -116,6 +122,7 @@ void ofApp::mouseDragged(int x, int y, int button) {
 void ofApp::mousePressed(int x, int y, int button) {
 	if (0 <= x && x < mainWidth && 0 <= y && y < mainHeight) {
 		drawingFlag = true;
+		paintTool.points.push_back(glm::vec2(x, y));
 	}
 
 	if (mainWidth <= x && x < ofGetWidth() && 0 <= y && y < 256) {
@@ -125,12 +132,30 @@ void ofApp::mousePressed(int x, int y, int button) {
 
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button) {
-	paintTool.fbo2D.begin();
-	ofSetColor(255, 255, 255, 255);
-	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	paintTool.preFbo.draw(0, 0, mainWidth, mainHeight);
-	paintTool.fbo2D.end();
-	paintTool.points.clear();
+	if (drawingFlag) {
+#ifdef __EMSCRIPTEN__
+		const bool isPen = getPenMode() != 0;
+#else
+		const bool isPen = ui.penSwitch;
+#endif
+		if (isPen) {
+			paintTool.strokeSize = ui.penSize;
+		} else {
+			paintTool.strokeSize = ui.eraserSize;
+		}
+		paintTool.color = ofColor(paintTool.color.r, paintTool.color.g, paintTool.color.b, ui.penAlpha * 255);
+
+		paintTool.drawLine(isPen, ui.eraserAlpha * 255);
+		paintTool.saveUndo();
+		paintTool.fbo2D.begin();
+		ofSetColor(255, 255, 255, 255);
+		glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+		paintTool.preFbo.draw(0, 0, mainWidth, mainHeight);
+		paintTool.fbo2D.end();
+		paintTool.points.clear();
+
+		paintTool.redoCount = 0;
+	}
 
 	drawingFlag = false;
 	pickerFlag = false;
@@ -158,5 +183,7 @@ void ofApp::dragEvent(ofDragInfo dragInfo) {
 
 //--------------------------------------------------------------
 void ofApp::exit() {
+	ui.undo.removeListener(&paintTool, &PaintTool::undo);
+	ui.redo.removeListener(&paintTool, &PaintTool::redo);
 	ui.deleteAll.removeListener(&paintTool, &PaintTool::deleteAll);
 }
