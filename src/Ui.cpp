@@ -15,6 +15,13 @@ Ui::Ui() {
 	eraserSize.setSize(256, 30);
 	eraserAlpha.setup("eraserAlpha", 1.0, 0.0, 1.0);
 	eraserAlpha.setSize(256, 30);
+	undo.setup("undo");
+	undo.setSize(100, 30);
+	redo.setup("redo");
+	redo.setSize(100, 30);
+	deleteAll.setup("delete");
+	deleteAll.setSize(100, 30);
+
 
 #ifndef __EMSCRIPTEN__
 	penSwitch.setup("pen/eraser", true);
@@ -89,18 +96,23 @@ void Ui::placeUi(int mainWidth, bool isPen) {
 	penAlpha.setPosition(mainWidth, 258 + 32 * 2);
 	eraserSize.setPosition(mainWidth, 258 + 32 * 1);
 	eraserAlpha.setPosition(mainWidth, 258 + 32 * 2);
+	undo.setPosition(mainWidth, 258 + 32 * 5);
+	redo.setPosition(mainWidth, 258 + 32 * 6);
+	deleteAll.setPosition(mainWidth, 258 + 32 * 7);
 
 #ifndef __EMSCRIPTEN__
 	penSwitch.setPosition(mainWidth, 258 + 32 * 4);
 #endif // __EMSCRIPTEN__
 
+	hue.draw();
+	undo.draw();
+	redo.draw();
+	deleteAll.draw();
 
 	if (isPen) {
-		hue.draw();
 		penSize.draw();
 		penAlpha.draw();
 	} else {
-		hue.draw();
 		eraserSize.draw();
 		eraserAlpha.draw();
 	}
