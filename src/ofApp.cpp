@@ -48,7 +48,7 @@ void ofApp::draw() {
 	ofBackground(getBackgroundBrightness());
 	const bool isPen = getPenMode() != 0;
 #else
-	ofBackground(255);
+	ofBackground(100);
 	const bool isPen = ui.penSwitch;
 #endif // __EMSCRIPTEN__
 
@@ -67,7 +67,7 @@ void ofApp::draw() {
 	paintTool.color = ofColor(paintTool.color.r, paintTool.color.g, paintTool.color.b, ui.penAlpha * 255);
 
 	paintTool.drawLine(isPen, ui.eraserAlpha * 255);
-	paintTool.drawCanvas(mainWidth, mainHeight);
+	paintTool.drawCanvas(drawingFlag);
 }
 
 //--------------------------------------------------------------
@@ -148,6 +148,7 @@ void ofApp::mouseReleased(int x, int y, int button) {
 		paintTool.drawLine(isPen, ui.eraserAlpha * 255);
 		paintTool.saveUndo();
 		paintTool.fbo2D.begin();
+		ofClear(0, 0, 0, 0);
 		ofSetColor(255, 255, 255, 255);
 		glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 		paintTool.preFbo.draw(0, 0, mainWidth, mainHeight);
