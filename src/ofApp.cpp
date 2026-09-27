@@ -7,6 +7,22 @@ EM_JS(int, getBackgroundBrightness, (), {
 	return window['paintBackgroundBrightness'] ?? 255;
 })
 
+EM_JS(double, getPenSize, (), {
+	return window['paintPenSize'] ?? 0.1;
+})
+
+EM_JS(double, getPenAlpha, (), {
+	return window['paintPenAlpha'] ?? 1;
+})
+
+EM_JS(double, getEraserSize, (), {
+	return window['paintEraserSize'] ?? 0.1;
+})
+
+EM_JS(double, getEraserAlpha, (), {
+	return window['paintEraserAlpha'] ?? 1;
+})
+
 EM_JS(int, getPenMode, (), {
 	const value = window['paintPenMode'];
 
@@ -47,17 +63,17 @@ void ofApp::draw() {
 #ifdef __EMSCRIPTEN__
 	ofBackground(getBackgroundBrightness());
 	const bool isPen = getPenMode() != 0;
-#else
-	ofBackground(100);
-	const bool isPen = ui.penSwitch;
-#endif // __EMSCRIPTEN__
 
-	ui.placeUi(mainWidth, isPen);
-	ui.updatePicker(mainWidth);
-	if (pickerFlag) {
-		ui.picking(ofGetMouseX(), ofGetMouseY(), mainWidth);
-		paintTool.color = ofColor(ui.pickedColor);
+	if (isPen) {
+		paintTool.strokeSize = getPenSize();
+	} else {
+		paintTool.strokeSize = getEraserSize();
 	}
+	paintTool.color = ofColor(paintTool.color.r, paintTool.color.g, paintTool.color.b, getPenAlpha() * 255);
+	paintTool.drawLine(isPen, getEraserAlpha() * 255);
+#else
+	ofBackground(255);
+	const bool isPen = ui.penSwitch;
 
 	if (isPen) {
 		paintTool.strokeSize = ui.penSize;
@@ -65,9 +81,19 @@ void ofApp::draw() {
 		paintTool.strokeSize = ui.eraserSize;
 	}
 	paintTool.color = ofColor(paintTool.color.r, paintTool.color.g, paintTool.color.b, ui.penAlpha * 255);
-
 	paintTool.drawLine(isPen, ui.eraserAlpha * 255);
+#endif // __EMSCRIPTEN__
 	paintTool.drawCanvas(drawingFlag);
+
+	ofSetColor(100);
+	ofDrawRectangle(800, 256, 256, 344);
+
+	ui.placeUi(mainWidth, isPen);
+	ui.updatePicker(mainWidth);
+	if (pickerFlag) {
+		ui.picking(ofGetMouseX(), ofGetMouseY(), mainWidth);
+		paintTool.color = ofColor(ui.pickedColor);
+	}
 }
 
 //--------------------------------------------------------------
@@ -135,17 +161,24 @@ void ofApp::mouseReleased(int x, int y, int button) {
 	if (drawingFlag) {
 #ifdef __EMSCRIPTEN__
 		const bool isPen = getPenMode() != 0;
+		if (isPen) {
+			paintTool.strokeSize = getPenSize();
+		} else {
+			paintTool.strokeSize = getEraserSize();
+		}
+		paintTool.color = ofColor(paintTool.color.r, paintTool.color.g, paintTool.color.b, getPenAlpha() * 255);
+		paintTool.drawLine(isPen, getEraserAlpha() * 255);
 #else
 		const bool isPen = ui.penSwitch;
-#endif
 		if (isPen) {
 			paintTool.strokeSize = ui.penSize;
 		} else {
 			paintTool.strokeSize = ui.eraserSize;
 		}
 		paintTool.color = ofColor(paintTool.color.r, paintTool.color.g, paintTool.color.b, ui.penAlpha * 255);
-
 		paintTool.drawLine(isPen, ui.eraserAlpha * 255);
+#endif
+
 		paintTool.saveUndo();
 		paintTool.fbo2D.begin();
 		ofClear(0, 0, 0, 0);

@@ -2,11 +2,21 @@ import { useRef, useState } from 'react'
 
 type PaintWindow = Window & {
     paintBackgroundBrightness?: number
+    paintHue?: number
+    paintPenSize?: number
+    paintPenAlpha?: number
+    paintEraserSize?: number
+    paintEraserAlpha?: number
     paintPenMode?: boolean
 }
 
 export default function OfViewer() {
     const [brightness, setBrightness] = useState(255)
+    const [hue, setHue] = useState(0)
+    const [penSize, setPenSize] = useState(0.1)
+    const [penAlpha, setPenAlpha] = useState(1)
+    const [eraserSize, setEraserSize] = useState(0.1)
+    const [eraserAlpha, setEraserAlpha] = useState(1)
     const [isPen, setIsPen] = useState(true)
 
     const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -16,6 +26,46 @@ export default function OfViewer() {
 
         if (paintWindow) {
             (paintWindow as PaintWindow).paintBackgroundBrightness = value
+        }
+    }
+
+    function sendHue(value: number) {
+        const paintWindow = iframeRef.current?.contentWindow
+
+        if (paintWindow) {
+            (paintWindow as PaintWindow).paintHue = value
+        }
+    }
+
+    function sendPenSize(value: number) {
+        const paintWindow = iframeRef.current?.contentWindow
+
+        if (paintWindow) {
+            (paintWindow as PaintWindow).paintPenSize = value
+        }
+    }
+
+    function sendPenAlpha(value: number) {
+        const paintWindow = iframeRef.current?.contentWindow
+
+        if (paintWindow) {
+            (paintWindow as PaintWindow).paintPenAlpha = value
+        }
+    }
+
+    function sendEraserSize(value: number) {
+        const paintWindow = iframeRef.current?.contentWindow
+
+        if (paintWindow) {
+            (paintWindow as PaintWindow).paintEraserSize = value
+        }
+    }
+
+    function sendEraserAlpha(value: number) {
+        const paintWindow = iframeRef.current?.contentWindow
+
+        if (paintWindow) {
+            (paintWindow as PaintWindow).paintEraserAlpha = value
         }
     }
 
@@ -45,6 +95,86 @@ export default function OfViewer() {
                 />
             </label>
 
+            <label style={{ display: 'block' }}>
+                色相:{hue}
+                <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={hue}
+                    onChange={(event) => {
+                        const value = event.currentTarget.valueAsNumber
+                        setHue(value)
+                        sendHue(value)
+                    }}
+                />
+            </label>
+
+            <label style={{ display: 'block' }}>
+                ペンの太さ:{penSize}
+                <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={penSize}
+                    onChange={(event) => {
+                        const value = event.currentTarget.valueAsNumber
+                        setPenSize(value)
+                        sendPenSize(value)
+                    }}
+                />
+            </label>
+
+            <label style={{ display: 'block' }}>
+                ペンの透明度:{penAlpha}
+                <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={penAlpha}
+                    onChange={(event) => {
+                        const value = event.currentTarget.valueAsNumber
+                        setPenAlpha(value)
+                        sendPenAlpha(value)
+                    }}
+                />
+            </label>
+
+            <label style={{ display: 'block' }}>
+                消しゴムの太さ:{eraserSize}
+                <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={eraserSize}
+                    onChange={(event) => {
+                        const value = event.currentTarget.valueAsNumber
+                        setEraserSize(value)
+                        sendEraserSize(value)
+                    }}
+                />
+            </label>
+
+            <label style={{ display: 'block' }}>
+                消しゴムの透明度:{eraserAlpha}
+                <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={eraserAlpha}
+                    onChange={(event) => {
+                        const value = event.currentTarget.valueAsNumber
+                        setEraserAlpha(value)
+                        sendEraserAlpha(value)
+                    }}
+                />
+            </label>
+
             <button
                 type="button"
                 onClick={() => {
@@ -68,6 +198,11 @@ export default function OfViewer() {
                     const iframe = event.currentTarget;
 
                     sendBrightness(brightness);
+                    sendHue(hue);
+                    sendPenSize(penSize);
+                    sendPenAlpha(penAlpha);
+                    sendEraserSize(eraserSize);
+                    sendEraserAlpha(eraserAlpha);
                     sendPenMode(isPen);
 
                     const content =
