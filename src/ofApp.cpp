@@ -63,8 +63,6 @@ void ofApp::setup() {
 	ofClear(0, 0, 0, 0);
 	paintTool.fbo2D.end();
 
-	//ofSetLineWidth(10);
-	paintTool.color = ofColor(0, 0, 0, 255);
 	ui.undo.addListener(&paintTool, &PaintTool::undo);
 	ui.redo.addListener(&paintTool, &PaintTool::redo);
 	ui.deleteAll.addListener(&paintTool, &PaintTool::deleteAll);
@@ -105,7 +103,9 @@ void ofApp::draw() {
 		paintTool.strokeSize = getEraserSize();
 	}
 	paintTool.color = ofColor(paintTool.color.r, paintTool.color.g, paintTool.color.b, getPenAlpha() * 255);
-	paintTool.drawLine(isPen, getEraserAlpha() * 255);
+	if (drawingFlag) {
+		paintTool.drawLine(isPen, getEraserAlpha() * 255);
+	}
 #else
 	ofBackground(255);
 	const bool isPen = ui.penSwitch;
@@ -116,18 +116,20 @@ void ofApp::draw() {
 		paintTool.strokeSize = ui.eraserSize;
 	}
 	paintTool.color = ofColor(paintTool.color.r, paintTool.color.g, paintTool.color.b, ui.penAlpha * 255);
-	paintTool.drawLine(isPen, ui.eraserAlpha * 255);
+	if (drawingFlag) {
+		paintTool.drawLine(isPen, ui.eraserAlpha * 255);
+	}
 #endif // __EMSCRIPTEN__
 	paintTool.drawCanvas(drawingFlag);
 
 	ofSetColor(100);
 	ofDrawRectangle(800, 256, 256, 344);
 
-	ui.placeUi(mainWidth, isPen);
+	ui.placeUi(isPen);
 	ui.updatePicker(mainWidth);
 	if (pickerFlag) {
 		ui.picking(ofGetMouseX(), ofGetMouseY(), mainWidth);
-		paintTool.color = ofColor(ui.pickedColor);
+		paintTool.color = ui.pickedColor;
 	}
 }
 
@@ -150,30 +152,29 @@ void ofApp::mouseDragged(int x, int y, int button) {
 
 		//"When the coordinates are too far apart, interpolate the values in between"
 		if (paintTool.points.size() > 1) {
+			const glm::vec2 currentPoint = paintTool.points.back();
+			const glm::vec2 previousPoint = paintTool.points[paintTool.points.size() - 2];
 
 			vector<glm::vec2> newPoints; //Points for interpolation
-			float pointsDist = glm::distance(paintTool.points[paintTool.points.size() - 1], paintTool.points[paintTool.points.size() - 2]);
-
+			const float pointsDist = glm::distance(currentPoint, previousPoint);
 			float idealDist = 3;
 			if (pointsDist > idealDist) {
 				float NumberOfPoint = pointsDist / idealDist;
 				float span = 1 / NumberOfPoint;
 
 				for (float i = span; i < 1; i += span) {
-					glm::vec2 point = glm::mix(paintTool.points[paintTool.points.size() - 1], paintTool.points[paintTool.points.size() - 2], i);
-
-					float lastDist = glm::distance(point, paintTool.points[paintTool.points.size() - 2]);
-					//`lastDist` is the distance between the last point to be interpolated and the last point before interpolation.
+					glm::vec2 point = glm::mix(currentPoint, previousPoint, i);
+					float lastDist = glm::distance(point, previousPoint); //`lastDist` is the distance between the last point to be interpolated and the last point before interpolation.
 					//If `lastDist` is too small, the last point is unnecessary.
 					if (lastDist > 0.7) {
 						newPoints.push_back(point);
 					}
 				}
 
-				for (int i = 0; i < newPoints.size(); i++) {
-					paintTool.points.insert(paintTool.points.begin() + paintTool.points.size() - 1, newPoints[i]);
-				}
-				newPoints.clear();
+				paintTool.points.insert(
+					paintTool.points.end() - 1,
+					newPoints.begin(),
+					newPoints.end());
 			}
 		}
 	}
@@ -181,6 +182,10 @@ void ofApp::mouseDragged(int x, int y, int button) {
 
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button) {
+	if (button != OF_MOUSE_BUTTON_LEFT) {
+		return;
+	}
+
 	if (0 <= x && x < mainWidth && 0 <= y && y < mainHeight) {
 		drawingFlag = true;
 		paintTool.points.push_back(glm::vec2(x, y));
@@ -193,6 +198,10 @@ void ofApp::mousePressed(int x, int y, int button) {
 
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button) {
+	if (button != OF_MOUSE_BUTTON_LEFT) {
+		return;
+	}
+
 	if (drawingFlag) {
 #ifdef __EMSCRIPTEN__
 		const bool isPen = getPenMode() != 0;
@@ -219,7 +228,7 @@ void ofApp::mouseReleased(int x, int y, int button) {
 		ofClear(0, 0, 0, 0);
 		ofSetColor(255, 255, 255, 255);
 		glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-		paintTool.preFbo.draw(0, 0, mainWidth, mainHeight);
+		paintTool.preFbo2D.draw(0, 0, mainWidth, mainHeight);
 		paintTool.fbo2D.end();
 		paintTool.points.clear();
 

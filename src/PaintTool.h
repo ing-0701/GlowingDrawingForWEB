@@ -8,9 +8,8 @@ public:
 	ofColor color;
 	vector<glm::vec2> points;
 	ofFbo fbo2D;
-	ofFbo preFbo;
+	ofFbo preFbo2D;
 	ofFbo redoFbo;
-	ofPolyline line;
 	static const int UNDO_CAPACITY = 20;
 	ofFbo undoFbos[UNDO_CAPACITY];
 	int undoWriteIndex = 0;
@@ -20,7 +19,6 @@ public:
 	PaintTool(int mainWidth, int mainHeight);
 
 	void drawLine(bool penSwith, float eraserAlpha);
-	void saveLine();
 	void drawCanvas(bool drawingFlag);
 	void saveUndo();
 	void undo();
