@@ -1,14 +1,23 @@
-#pragma once
-
 #include "Ui.h"
 
-Ui::Ui() {
+#ifdef __EMSCRIPTEN__
+	#include <emscripten.h>
+EM_JS(double, getHue, (), {
+	return window['paintHue'] ?? 0;
+})
+#endif
+
+Ui::Ui(int mainWidth) {
 	ofxGuiSetDefaultWidth(256);
 	ofxGuiSetDefaultHeight(10);
+
+#ifndef __EMSCRIPTEN__
 	hue.setup("Hue", 0.0, 0.0, 1.0);
 	hue.setSize(256, 30);
 	penSize.setup("penSize", 0.1, 0.1, 1.0);
 	penSize.setSize(256, 30);
+	penSwitch.setup("pen/eraser", true);
+	penSwitch.setSize(100, 30);
 	penAlpha.setup("penAlpha", 1.0, 0.0, 1.0);
 	penAlpha.setSize(256, 30);
 	eraserSize.setup("eraserSize", 0.1, 0.1, 1.0);
@@ -21,44 +30,43 @@ Ui::Ui() {
 	redo.setSize(100, 30);
 	deleteAll.setup("delete");
 	deleteAll.setSize(100, 30);
-
-
-#ifndef __EMSCRIPTEN__
-	penSwitch.setup("pen/eraser", true);
-	penSwitch.setSize(100, 30);
+	hue.setPosition(mainWidth, 258 + 32 * 0);
+	penSize.setPosition(mainWidth, 258 + 32 * 1);
+	penAlpha.setPosition(mainWidth, 258 + 32 * 2);
+	eraserSize.setPosition(mainWidth, 258 + 32 * 1);
+	eraserAlpha.setPosition(mainWidth, 258 + 32 * 2);
+	penSwitch.setPosition(mainWidth, 258 + 32 * 4);
+	undo.setPosition(mainWidth, 258 + 32 * 5);
+	redo.setPosition(mainWidth, 258 + 32 * 6);
+	deleteAll.setPosition(mainWidth, 258 + 32 * 7);
 #endif // !__EMSCRIPTEN__
 
-	ofFbo::Settings s;
-	s.width = 256;
-	s.height = 256;
-	s.internalformat = GL_RGBA32F;
-
-	pickerFbo.allocate(s);
 	pickerPix.allocate(256, 256, OF_PIXELS_RGBA);
 	pickerTex.allocate(pickerPix);
-
-	pickerFbo.begin();
-	ofClear(255, 255, 255, 255);
-	pickerFbo.end();
 }
 
 void Ui::updatePicker(int mainWidth) {
-	for (int y = 0; y < 256; y++) {
-		for (int x = 0; x < 256; x++) {
-			ofColor pixColor;
-			pixColor.setHsb(hue * 255, x, 255 - y);
-			pickerPix.setColor(x, y, pixColor);
+#ifdef __EMSCRIPTEN__
+	const float currentHue = static_cast<float>(getHue());
+#else
+	const float currentHue = hue;
+#endif
+
+	if (currentHue != lastHue) {
+		for (int y = 0; y < 256; y++) {
+			for (int x = 0; x < 256; x++) {
+				ofColor pixColor;
+				pixColor.setHsb(currentHue * 255, x, 255 - y);
+
+				pickerPix.setColor(x, y, pixColor);
+			}
 		}
+		pickerTex.loadData(pickerPix);
+		lastHue = currentHue;
 	}
-	pickerTex.loadData(pickerPix);
 
 	ofSetColor(255, 255, 255, 255);
-
-	pickerFbo.begin();
-	pickerTex.draw(0, 0);
-	pickerFbo.end();
-
-	pickerFbo.draw(mainWidth, 0, 256, 256);
+	pickerTex.draw(mainWidth, 0, 256, 256);
 }
 
 void Ui::picking(int x, int y, int mainWidth) {
@@ -76,7 +84,11 @@ void Ui::picking(int x, int y, int mainWidth) {
 	}
 
 	ofColor nowColor;
+#ifdef __EMSCRIPTEN__
+	nowColor.setHsb(getHue() * 255, x - mainWidth, 255 - y);
+#else
 	nowColor.setHsb(hue * 255, x - mainWidth, 255 - y);
+#endif // __EMSCRIPTEN__
 
 	ofFill();
 	ofSetColor(nowColor);
@@ -87,28 +99,13 @@ void Ui::picking(int x, int y, int mainWidth) {
 	ofSetLineWidth(2);
 	ofDrawCircle(x, y, 10);
 
-	pickedColor = ofColor(nowColor);
+	pickedColor = nowColor;
 }
 
-void Ui::placeUi(int mainWidth, bool isPen) {
-	hue.setPosition(mainWidth, 258 + 32 * 0);
-	penSize.setPosition(mainWidth, 258 + 32 * 1);
-	penAlpha.setPosition(mainWidth, 258 + 32 * 2);
-	eraserSize.setPosition(mainWidth, 258 + 32 * 1);
-	eraserAlpha.setPosition(mainWidth, 258 + 32 * 2);
-	undo.setPosition(mainWidth, 258 + 32 * 5);
-	redo.setPosition(mainWidth, 258 + 32 * 6);
-	deleteAll.setPosition(mainWidth, 258 + 32 * 7);
+void Ui::placeUi(bool isPen) {
 
 #ifndef __EMSCRIPTEN__
-	penSwitch.setPosition(mainWidth, 258 + 32 * 4);
-#endif // __EMSCRIPTEN__
-
 	hue.draw();
-	undo.draw();
-	redo.draw();
-	deleteAll.draw();
-
 	if (isPen) {
 		penSize.draw();
 		penAlpha.draw();
@@ -116,10 +113,9 @@ void Ui::placeUi(int mainWidth, bool isPen) {
 		eraserSize.draw();
 		eraserAlpha.draw();
 	}
-
-#ifndef __EMSCRIPTEN__
 	penSwitch.draw();
+	undo.draw();
+	redo.draw();
+	deleteAll.draw();
 #endif // __EMSCRIPTEN__
-
-	
 }

@@ -14,15 +14,14 @@ public:
 	ofxButton undo;
 	ofxButton redo;
 	ofxButton deleteAll;
-	ofFbo pickerFbo;
 	ofPixels pickerPix;
 	ofTexture pickerTex;
 	ofColor pickedColor;
 
-	Ui();
+	Ui(int mainWidth);
 	void updatePicker(int mainWidth);
 	void picking(int x, int y, int mainWidth);
 
-	void placeUi(int mainWidth, bool isPen);
-	void buttonPressed();
+	void placeUi(bool isPen);
+	float lastHue = -1.0f;
 };

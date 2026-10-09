@@ -30,5 +30,5 @@ public:
 	PaintTool paintTool = PaintTool(mainWidth, mainHeight);
 	ofPixels pixels;
 
-	Ui ui;
+	Ui ui = Ui(mainWidth);
 };
