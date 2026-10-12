@@ -56,7 +56,6 @@ bool pickerFlag = false;
 
 //--------------------------------------------------------------
 void ofApp::setup() {
-
 	ofSetFrameRate(60);
 
 	paintTool.fbo2D.begin();
@@ -66,6 +65,11 @@ void ofApp::setup() {
 	ui.undo.addListener(&paintTool, &PaintTool::undo);
 	ui.redo.addListener(&paintTool, &PaintTool::redo);
 	ui.deleteAll.addListener(&paintTool, &PaintTool::deleteAll);
+
+#ifdef __EMSCRIPTEN__
+#else
+	paintTool.setupGlow();
+#endif // __EMSCRIPTEN__
 }
 
 //--------------------------------------------------------------
@@ -107,7 +111,7 @@ void ofApp::draw() {
 		paintTool.drawLine(isPen, getEraserAlpha() * 255);
 	}
 #else
-	ofBackground(255);
+	ofBackground(20);
 	const bool isPen = ui.penSwitch;
 
 	if (isPen) {

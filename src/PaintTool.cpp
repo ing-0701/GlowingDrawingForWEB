@@ -12,9 +12,14 @@ PaintTool::PaintTool(int mainWidth, int mainHeight) {
 	fbo2D.allocate(s);
 	preFbo2D.allocate(s);
 	redoFbo.allocate(s);
+	glowFbo.allocate(s);
 	for (int i = 0; i < UNDO_CAPACITY; i++) {
 		undoFbos[i].allocate(s);
 	}
+#ifdef __EMSCRIPTEN__
+#else
+	preGlowFbo.allocate(s);
+#endif // __EMSCRIPTEN__
 }
 
 void PaintTool::drawLine(bool penSwitch, float eraserAlpha) {
@@ -44,13 +49,41 @@ void PaintTool::drawLine(bool penSwitch, float eraserAlpha) {
 }
 
 void PaintTool::drawCanvas(bool drawingFlag) {
-	ofSetColor(255, 255, 255, 255);
-	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	if (drawingFlag) {
-		preFbo2D.draw(0, 0);
-	} else {
-		fbo2D.draw(0, 0);
+	ofFbo& source = drawingFlag ? preFbo2D : fbo2D;
+
+#ifdef __EMSCRIPTEN__
+#else
+	const bool canDrawGlow = glowShader.isLoaded();
+
+	if (canDrawGlow) {
+		updateGlow(source);
 	}
+#endif // __EMSCRIPTEN__
+
+	ofEnableAlphaBlending();
+	ofSetColor(255, 255, 255, 255);
+	glBlendEquation(GL_FUNC_ADD);
+	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	source.draw(0, 0);
+
+#ifdef __EMSCRIPTEN__
+#else
+	if (canDrawGlow) {
+		glBlendFuncSeparate(
+			GL_ONE, GL_ONE,
+			GL_ZERO, GL_ONE
+		);
+
+		glowFbo.draw(0, 0);
+
+	   glBlendFuncSeparate(
+			GL_ONE, GL_ONE_MINUS_SRC_ALPHA,
+			GL_ONE, GL_ONE_MINUS_SRC_ALPHA
+	   );
+	}
+#endif // __EMSCRIPTEN__
+
+	
 }
 
 void PaintTool::saveUndo() {
@@ -138,3 +171,51 @@ void PaintTool::deleteAll() {
 
 	redoCount = 0;
 }
+
+#ifdef __EMSCRIPTEN__
+#else
+void PaintTool::setupGlow() {
+	if (!glowShader.load("shaders/glowBlur")) {
+		ofLogError("PaintTool") << "Failed to load glow shader";
+	}
+}
+
+void PaintTool::updateGlow(ofFbo& source) {
+	ofPushStyle();
+
+	// 1回目：元画像を横方向にぼかす
+	preGlowFbo.begin();
+	ofClear(0, 0, 0, 0);
+	ofDisableAlphaBlending();
+	ofSetColor(255, 255, 255, 255);
+
+	glowShader.begin();
+	glowShader.setUniformTexture("sourceTexture", source.getTexture(), 0);
+	glowShader.setUniform2f("direction", 1.0f, 0.0f);
+	glowShader.setUniform2f("imageSize", source.getWidth(), source.getHeight());
+	glowShader.setUniform1f("strength", 1.0f);
+
+	source.draw(0, 0);
+	glowShader.end();
+	preGlowFbo.end();
+
+	// 2回目：横方向の結果を縦方向にぼかす
+	glowFbo.begin();
+	ofClear(0, 0, 0, 0);
+	ofDisableAlphaBlending();
+	ofSetColor(255, 255, 255, 255);
+
+	glowShader.begin();
+	glowShader.setUniformTexture("sourceTexture", preGlowFbo.getTexture(), 0);
+	glowShader.setUniform2f("direction", 0.0f, 1.0f);
+	glowShader.setUniform2f("imageSize", preGlowFbo.getWidth(), preGlowFbo.getHeight());
+	glowShader.setUniform1f("strength", glowStrength);
+
+	preGlowFbo.draw(0, 0);
+
+	glowShader.end();
+	glowFbo.end();
+
+	ofPopStyle();
+}
+#endif // __EMSCRIPTEN__
