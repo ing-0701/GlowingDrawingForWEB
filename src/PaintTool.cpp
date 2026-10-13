@@ -91,7 +91,7 @@ void PaintTool::drawCanvas(bool drawingFlag) {
 	if (canDrawGlow) {
 		glowFbo1.draw(0, 0);
 
-		const float period = 3.0f;
+		const float period = 1.0f;
 		const float time = ofGetElapsedTimef();
 		const float phase = TWO_PI * time / period;
 		const float amount = (1.0f - std::cos(phase)) * 0.5f;
@@ -193,6 +193,16 @@ void PaintTool::deleteAll() {
 	target.begin();
 	ofClear(0, 0, 0, 0);
 	target.end();
+
+	if (glowCanvas) {
+		glowFbo1.begin();
+		ofClear(0, 0, 0, 0);
+		glowFbo1.end();
+
+		glowFbo2.begin();
+		ofClear(0, 0, 0, 0);
+		glowFbo2.end();
+	}
 }
 
 #ifdef __EMSCRIPTEN__
