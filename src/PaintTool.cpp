@@ -11,20 +11,35 @@ PaintTool::PaintTool(int mainWidth, int mainHeight) {
 
 	fbo2D.allocate(s);
 	preFbo2D.allocate(s);
-	redoFbo.allocate(s);
+	historySwapFbo.allocate(s);
+	glowCoreFbo.allocate(s);
+	preGlowFbo.allocate(s);
+	glowFbo1.allocate(s);
+	glowFbo2.allocate(s);
+
 	for (int i = 0; i < UNDO_CAPACITY; i++) {
 		undoFbos[i].allocate(s);
 	}
+
+	glowCoreFbo.begin();
+	ofClear(0, 0, 0, 0);
+	glowCoreFbo.end();
+
+#ifdef __EMSCRIPTEN__
+#else
+#endif // __EMSCRIPTEN__
 }
 
 void PaintTool::drawLine(bool penSwitch, float eraserAlpha) {
+	ofFbo & base = glowCanvas ? glowCoreFbo : fbo2D;
+
 	ofFill();
 
 	preFbo2D.begin();
 	ofClear(0, 0, 0, 0);
 	ofSetColor(255, 255, 255, 255);
 	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	fbo2D.draw(0, 0);
+	base.draw(0, 0);
 
 	if (penSwitch) {
 		ofSetColor(color);
@@ -44,29 +59,80 @@ void PaintTool::drawLine(bool penSwitch, float eraserAlpha) {
 }
 
 void PaintTool::drawCanvas(bool drawingFlag) {
-	ofSetColor(255, 255, 255, 255);
-	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	if (drawingFlag) {
-		preFbo2D.draw(0, 0);
-	} else {
-		fbo2D.draw(0, 0);
+	ofFbo & normalSource = (drawingFlag && !glowCanvas) ? preFbo2D : fbo2D;
+	ofFbo & glowSource = (drawingFlag && glowCanvas) ? preFbo2D : glowCoreFbo;
+
+#ifdef __EMSCRIPTEN__
+#else
+	const bool canDrawGlow = glowShader.isLoaded();
+
+	if (canDrawGlow) {
+		blurInto(glowSource, glowFbo1, 1.0f, 1.0f);
+		blurInto(glowSource, glowFbo2, 4.0f, glowStrength);
 	}
+#endif // __EMSCRIPTEN__
+
+	ofEnableAlphaBlending();
+	ofSetColor(255, 255, 255, 255);
+	glBlendEquation(GL_FUNC_ADD);
+	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	normalSource.draw(0, 0);
+
+#ifdef __EMSCRIPTEN__
+	glowSource.draw(0, 0);
+#else
+	if (canDrawGlow) {
+		glowFbo1.draw(0, 0);
+
+		glBlendFuncSeparate(
+			GL_ONE, GL_ONE,
+			GL_ZERO, GL_ONE);
+
+		glowFbo2.draw(0, 0);
+
+		glBlendFuncSeparate(
+			GL_ONE, GL_ONE_MINUS_SRC_ALPHA,
+			GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	}
+#endif // __EMSCRIPTEN__
+}
+
+void PaintTool::copyFbo(ofFbo & source, ofFbo & destination) {
+	ofPushStyle();
+
+	destination.begin();
+	ofClear(0, 0, 0, 0);
+	ofDisableAlphaBlending();
+	ofSetColor(255, 255, 255, 255);
+
+	source.draw(0, 0);
+
+	destination.end();
+
+	ofPopStyle();
+}
+
+void PaintTool::swapHistory(int index) {
+	ofFbo & target = (undoTargets[index] == 1) ? glowCoreFbo : fbo2D;
+
+	copyFbo(target, historySwapFbo);
+	copyFbo(undoFbos[index], target);
+	copyFbo(historySwapFbo, undoFbos[index]);
 }
 
 void PaintTool::saveUndo() {
-	undoFbos[undoWriteIndex].begin();
+	ofFbo & target = glowCanvas ? glowCoreFbo : fbo2D;
 
-	ofClear(0, 0, 0, 0);
-	ofSetColor(255, 255, 255, 255);
-	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	fbo2D.draw(0, 0);
+	copyFbo(target, undoFbos[undoWriteIndex]);
 
-	undoFbos[undoWriteIndex].end();
+	undoTargets[undoWriteIndex] = glowCanvas ? 1 : 0;
 
 	undoWriteIndex = (undoWriteIndex + 1) % UNDO_CAPACITY;
+
 	if (undoCount < UNDO_CAPACITY) {
 		undoCount++;
 	}
+	redoCount = 0;
 }
 
 void PaintTool::undo() {
@@ -74,31 +140,9 @@ void PaintTool::undo() {
 		return;
 	}
 
-	if (redoCount == 0) {
-		redoFbo.begin();
+	undoWriteIndex = (undoWriteIndex + UNDO_CAPACITY - 1) % UNDO_CAPACITY;
 
-		ofClear(0, 0, 0, 0);
-		ofSetColor(255, 255, 255, 255);
-		glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-		fbo2D.draw(0, 0);
-
-		redoFbo.end();
-	}
-
-	undoWriteIndex--;
-
-	if (undoWriteIndex < 0) {
-		undoWriteIndex = UNDO_CAPACITY - 1;
-	}
-
-	fbo2D.begin();
-
-	ofClear(0, 0, 0, 0);
-	ofSetColor(255, 255, 255, 255);
-	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	undoFbos[undoWriteIndex].draw(0, 0);
-
-	fbo2D.end();
+	swapHistory(undoWriteIndex);
 
 	undoCount--;
 	redoCount++;
@@ -109,32 +153,70 @@ void PaintTool::redo() {
 		return;
 	}
 
-	undoWriteIndex++;
+	swapHistory(undoWriteIndex);
 
-	if (undoWriteIndex == UNDO_CAPACITY) {
-		undoWriteIndex = 0;
-	}
-
-	fbo2D.begin();
-	ofClear(0, 0, 0, 0);
-	ofSetColor(255, 255, 255, 255);
-	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	if (redoCount == 1) {
-		redoFbo.draw(0, 0);
-	} else {
-		undoFbos[undoWriteIndex].draw(0, 0);
-	}
-	fbo2D.end();
+	undoWriteIndex = (undoWriteIndex + 1) % UNDO_CAPACITY;
 
 	undoCount++;
 	redoCount--;
 }
 
 void PaintTool::deleteAll() {
-	saveUndo();
-	fbo2D.begin();
-	ofClear(0, 0, 0, 0);
-	fbo2D.end();
+	ofFbo & target = glowCanvas ? glowCoreFbo : fbo2D;
 
-	redoCount = 0;
+	saveUndo();
+
+	target.begin();
+	ofClear(0, 0, 0, 0);
+	target.end();
 }
+
+#ifdef __EMSCRIPTEN__
+#else
+void PaintTool::setupGlow() {
+	if (!glowShader.load("shaders/glowBlur")) {
+		ofLogError("PaintTool") << "Failed to load glow shader";
+	}
+}
+
+void PaintTool::blurInto(ofFbo & source, ofFbo & destination, float sigma, float strength) {
+	ofPushStyle();
+
+	// 1回目：元画像を横方向にぼかす
+	preGlowFbo.begin();
+	ofClear(0, 0, 0, 0);
+	ofDisableAlphaBlending();
+	ofSetColor(255, 255, 255, 255);
+
+	glowShader.begin();
+	glowShader.setUniformTexture("sourceTexture", source.getTexture(), 0);
+	glowShader.setUniform2f("direction", 1.0f, 0.0f);
+	glowShader.setUniform2f("imageSize", source.getWidth(), source.getHeight());
+	glowShader.setUniform1f("sigma", sigma);
+	glowShader.setUniform1f("strength", 1.0f);
+
+	source.draw(0, 0);
+	glowShader.end();
+	preGlowFbo.end();
+
+	// 2回目：横方向の結果を縦方向にぼかす
+	destination.begin();
+	ofClear(0, 0, 0, 0);
+	ofDisableAlphaBlending();
+	ofSetColor(255, 255, 255, 255);
+
+	glowShader.begin();
+	glowShader.setUniformTexture("sourceTexture", preGlowFbo.getTexture(), 0);
+	glowShader.setUniform2f("direction", 0.0f, 1.0f);
+	glowShader.setUniform2f("imageSize", preGlowFbo.getWidth(), preGlowFbo.getHeight());
+	glowShader.setUniform1f("sigma", sigma);
+	glowShader.setUniform1f("strength", strength);
+
+	preGlowFbo.draw(0, 0);
+
+	glowShader.end();
+	destination.end();
+
+	ofPopStyle();
+}
+#endif // __EMSCRIPTEN__
