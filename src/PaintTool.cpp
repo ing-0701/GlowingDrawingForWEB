@@ -1,4 +1,5 @@
 #include "PaintTool.h"
+#include <cmath>
 
 PaintTool::PaintTool(int mainWidth, int mainHeight) {
 	color = ofColor(0, 0, 0, 255);
@@ -56,6 +57,10 @@ void PaintTool::drawLine(bool penSwitch, float eraserAlpha) {
 	}
 
 	preFbo2D.end();
+
+	if (glowCanvas) {
+		glowNeedUpdate = true;
+	}
 }
 
 void PaintTool::drawCanvas(bool drawingFlag) {
@@ -66,10 +71,12 @@ void PaintTool::drawCanvas(bool drawingFlag) {
 #else
 	const bool canDrawGlow = glowShader.isLoaded();
 
-	if (canDrawGlow) {
-		blurInto(glowSource, glowFbo1, 1.0f, 1.0f);
+	if (canDrawGlow && glowNeedUpdate) {
+		blurInto(glowSource, glowFbo1, 1.5f, 1.0f);
 		blurInto(glowSource, glowFbo2, 4.0f, glowStrength);
 	}
+
+	glowNeedUpdate = false;
 #endif // __EMSCRIPTEN__
 
 	ofEnableAlphaBlending();
@@ -84,11 +91,24 @@ void PaintTool::drawCanvas(bool drawingFlag) {
 	if (canDrawGlow) {
 		glowFbo1.draw(0, 0);
 
+		const float period = 3.0f;
+		const float time = ofGetElapsedTimef();
+		const float phase = TWO_PI * time / period;
+		const float amount = (1.0f - std::cos(phase)) * 0.5f;
+
+		const float minBrightness = 0.25f;
+		const float maxBrightness = 1.0f;
+		const float brightness = minBrightness + (maxBrightness - minBrightness) * amount;
+
 		glBlendFuncSeparate(
 			GL_ONE, GL_ONE,
 			GL_ZERO, GL_ONE);
 
+		ofSetColor(ofFloatColor(brightness, brightness, brightness, 1.0f));
+
 		glowFbo2.draw(0, 0);
+
+		ofSetColor(255, 255, 255, 255);
 
 		glBlendFuncSeparate(
 			GL_ONE, GL_ONE_MINUS_SRC_ALPHA,
@@ -118,6 +138,10 @@ void PaintTool::swapHistory(int index) {
 	copyFbo(target, historySwapFbo);
 	copyFbo(undoFbos[index], target);
 	copyFbo(historySwapFbo, undoFbos[index]);
+
+	if (undoTargets[index] == 1) {
+		glowNeedUpdate = true;
+	}
 }
 
 void PaintTool::saveUndo() {
@@ -176,6 +200,10 @@ void PaintTool::deleteAll() {
 void PaintTool::setupGlow() {
 	if (!glowShader.load("shaders/glowBlur")) {
 		ofLogError("PaintTool") << "Failed to load glow shader";
+	}
+
+	if (glowCanvas) {
+		glowNeedUpdate = true;
 	}
 }
 

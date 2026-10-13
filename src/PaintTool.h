@@ -34,12 +34,13 @@ public:
 
 	float strokeSize;
 	bool glowCanvas = false;
+	bool glowNeedUpdate = true;
 
 #ifdef __EMSCRIPTEN__
 #else
 	ofShader glowShader;
 
-	float glowStrength = 1.0f;
+	float glowStrength = 2.0f;
 
 	void setupGlow();
 	void blurInto(ofFbo& source, ofFbo& destination, float sigma, float strength);
