@@ -12,24 +12,34 @@ PaintTool::PaintTool(int mainWidth, int mainHeight) {
 	fbo2D.allocate(s);
 	preFbo2D.allocate(s);
 	redoFbo.allocate(s);
-	glowFbo.allocate(s);
+	glowCoreFbo.allocate(s);
+	preGlowFbo.allocate(s);
+	glowFbo1.allocate(s);
+	glowFbo2.allocate(s);
+
 	for (int i = 0; i < UNDO_CAPACITY; i++) {
 		undoFbos[i].allocate(s);
 	}
+
+	glowCoreFbo.begin();
+	ofClear(0, 0, 0, 0);
+	glowCoreFbo.end();
+
 #ifdef __EMSCRIPTEN__
 #else
-	preGlowFbo.allocate(s);
 #endif // __EMSCRIPTEN__
 }
 
 void PaintTool::drawLine(bool penSwitch, float eraserAlpha) {
+	ofFbo & base = glowCanvas ? glowCoreFbo : fbo2D;
+
 	ofFill();
 
 	preFbo2D.begin();
 	ofClear(0, 0, 0, 0);
 	ofSetColor(255, 255, 255, 255);
 	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	fbo2D.draw(0, 0);
+	base.draw(0, 0);
 
 	if (penSwitch) {
 		ofSetColor(color);
@@ -49,14 +59,16 @@ void PaintTool::drawLine(bool penSwitch, float eraserAlpha) {
 }
 
 void PaintTool::drawCanvas(bool drawingFlag) {
-	ofFbo& source = drawingFlag ? preFbo2D : fbo2D;
+	ofFbo & normalSource = (drawingFlag && !glowCanvas) ? preFbo2D : fbo2D;
+	ofFbo & glowSource = (drawingFlag && glowCanvas) ? preFbo2D : glowCoreFbo;
 
 #ifdef __EMSCRIPTEN__
 #else
 	const bool canDrawGlow = glowShader.isLoaded();
 
 	if (canDrawGlow) {
-		updateGlow(source);
+		blurInto(glowSource, glowFbo1, 1.0f, 1.0f);
+		blurInto(glowSource, glowFbo2, 4.0f, glowStrength);
 	}
 #endif // __EMSCRIPTEN__
 
@@ -64,17 +76,20 @@ void PaintTool::drawCanvas(bool drawingFlag) {
 	ofSetColor(255, 255, 255, 255);
 	glBlendEquation(GL_FUNC_ADD);
 	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	source.draw(0, 0);
+	normalSource.draw(0, 0);
 
 #ifdef __EMSCRIPTEN__
+	glowSource.draw(0, 0);
 #else
 	if (canDrawGlow) {
+		glowFbo1.draw(0, 0);
+
 		glBlendFuncSeparate(
 			GL_ONE, GL_ONE,
 			GL_ZERO, GL_ONE
 		);
 
-		glowFbo.draw(0, 0);
+		glowFbo2.draw(0, 0);
 
 	   glBlendFuncSeparate(
 			GL_ONE, GL_ONE_MINUS_SRC_ALPHA,
@@ -180,7 +195,7 @@ void PaintTool::setupGlow() {
 	}
 }
 
-void PaintTool::updateGlow(ofFbo& source) {
+void PaintTool::blurInto(ofFbo& source, ofFbo& destination, float sigma, float strength) {
 	ofPushStyle();
 
 	// 1回目：元画像を横方向にぼかす
@@ -193,6 +208,7 @@ void PaintTool::updateGlow(ofFbo& source) {
 	glowShader.setUniformTexture("sourceTexture", source.getTexture(), 0);
 	glowShader.setUniform2f("direction", 1.0f, 0.0f);
 	glowShader.setUniform2f("imageSize", source.getWidth(), source.getHeight());
+	glowShader.setUniform1f("sigma", sigma);
 	glowShader.setUniform1f("strength", 1.0f);
 
 	source.draw(0, 0);
@@ -200,7 +216,7 @@ void PaintTool::updateGlow(ofFbo& source) {
 	preGlowFbo.end();
 
 	// 2回目：横方向の結果を縦方向にぼかす
-	glowFbo.begin();
+	destination.begin();
 	ofClear(0, 0, 0, 0);
 	ofDisableAlphaBlending();
 	ofSetColor(255, 255, 255, 255);
@@ -209,12 +225,13 @@ void PaintTool::updateGlow(ofFbo& source) {
 	glowShader.setUniformTexture("sourceTexture", preGlowFbo.getTexture(), 0);
 	glowShader.setUniform2f("direction", 0.0f, 1.0f);
 	glowShader.setUniform2f("imageSize", preGlowFbo.getWidth(), preGlowFbo.getHeight());
-	glowShader.setUniform1f("strength", glowStrength);
+	glowShader.setUniform1f("sigma", sigma);
+	glowShader.setUniform1f("strength", strength);
 
 	preGlowFbo.draw(0, 0);
 
 	glowShader.end();
-	glowFbo.end();
+	destination.end();
 
 	ofPopStyle();
 }

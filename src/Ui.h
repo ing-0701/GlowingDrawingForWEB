@@ -11,6 +11,7 @@ public:
 	ofxFloatSlider eraserSize;
 	ofxFloatSlider eraserAlpha;
 	ofxToggle penSwitch;
+	ofxToggle glowSwitch;
 	ofxButton undo;
 	ofxButton redo;
 	ofxButton deleteAll;

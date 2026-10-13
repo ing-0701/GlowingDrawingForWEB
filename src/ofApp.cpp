@@ -191,6 +191,12 @@ void ofApp::mousePressed(int x, int y, int button) {
 	}
 
 	if (0 <= x && x < mainWidth && 0 <= y && y < mainHeight) {
+#ifdef __EMSCRIPTEN__
+		paintTool.glowCanvas = false;
+#else
+		paintTool.glowCanvas = ui.glowSwitch;
+#endif // __EMSCRIPTEN__
+
 		drawingFlag = true;
 		paintTool.points.push_back(glm::vec2(x, y));
 	}
@@ -227,13 +233,15 @@ void ofApp::mouseReleased(int x, int y, int button) {
 		paintTool.drawLine(isPen, ui.eraserAlpha * 255);
 #endif
 
+		ofFbo & destination = paintTool.glowCanvas ? paintTool.glowCoreFbo : paintTool.fbo2D;
+
 		paintTool.saveUndo();
-		paintTool.fbo2D.begin();
+		destination.begin();
 		ofClear(0, 0, 0, 0);
 		ofSetColor(255, 255, 255, 255);
 		glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 		paintTool.preFbo2D.draw(0, 0, mainWidth, mainHeight);
-		paintTool.fbo2D.end();
+		destination.end();
 		paintTool.points.clear();
 
 		paintTool.redoCount = 0;

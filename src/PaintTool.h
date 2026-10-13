@@ -10,7 +10,10 @@ public:
 	ofFbo fbo2D;
 	ofFbo preFbo2D;
 	ofFbo redoFbo;
-	ofFbo glowFbo;
+	ofFbo glowCoreFbo;
+	ofFbo preGlowFbo;
+	ofFbo glowFbo1;
+	ofFbo glowFbo2;
 	static const int UNDO_CAPACITY = 20;
 	ofFbo undoFbos[UNDO_CAPACITY];
 	int undoWriteIndex = 0;
@@ -27,15 +30,15 @@ public:
 	void deleteAll();
 
 	float strokeSize;
+	bool glowCanvas = false;
 
 #ifdef __EMSCRIPTEN__
 #else
-	ofFbo preGlowFbo;
 	ofShader glowShader;
 
 	float glowStrength = 1.0f;
 
 	void setupGlow();
-	void updateGlow(ofFbo& source);
+	void blurInto(ofFbo& source, ofFbo& destination, float sigma, float strength);
 #endif // __EMSCRIPTEN__
 };

@@ -5,16 +5,16 @@ uniform sampler2DRect sourceTexture;
 uniform vec2 direction;
 uniform vec2 imageSize;
 uniform float strength;
+uniform float sigma;    //sigmaが大きいほど広くぼける
 
 varying vec2 textCoord;    //補間された後の、元画像の座標
 
 void main() {
-	const float sigma = 4.0;    //sigmaが小さいほど遠くの画素が薄くなる(ぼけが強くなる)
 
 	vec4 totalColor = vec4(0.0);
 	float totalWeight = 0.0;
 
-	for (int i = -24; i <= 12; ++i){
+	for (int i = -12; i <= 12; ++i){
 		float distance = float(i);
 
 		float weight = exp(

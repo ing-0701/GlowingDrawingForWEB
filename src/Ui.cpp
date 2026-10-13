@@ -14,30 +14,33 @@ Ui::Ui(int mainWidth) {
 #ifndef __EMSCRIPTEN__
 	hue.setup("Hue", 0.0, 0.0, 1.0);
 	hue.setSize(256, 30);
+	hue.setPosition(mainWidth, 258 + 32 * 0);
 	penSize.setup("penSize", 0.1, 0.1, 1.0);
 	penSize.setSize(256, 30);
+	penSize.setPosition(mainWidth, 258 + 32 * 1);
 	penSwitch.setup("pen/eraser", true);
 	penSwitch.setSize(100, 30);
+	penSwitch.setPosition(mainWidth, 258 + 32 * 4);
+	glowSwitch.setup("normal/glow", false);
+	glowSwitch.setSize(100, 30);
+	glowSwitch.setPosition(mainWidth+100, 258 + 32 * 4);
 	penAlpha.setup("penAlpha", 1.0, 0.0, 1.0);
 	penAlpha.setSize(256, 30);
+	penAlpha.setPosition(mainWidth, 258 + 32 * 2);
 	eraserSize.setup("eraserSize", 0.1, 0.1, 1.0);
 	eraserSize.setSize(256, 30);
+	eraserSize.setPosition(mainWidth, 258 + 32 * 1);
 	eraserAlpha.setup("eraserAlpha", 1.0, 0.0, 1.0);
 	eraserAlpha.setSize(256, 30);
+	eraserAlpha.setPosition(mainWidth, 258 + 32 * 2);
 	undo.setup("undo");
 	undo.setSize(100, 30);
+	undo.setPosition(mainWidth, 258 + 32 * 5);
 	redo.setup("redo");
 	redo.setSize(100, 30);
+	redo.setPosition(mainWidth, 258 + 32 * 6);
 	deleteAll.setup("delete");
 	deleteAll.setSize(100, 30);
-	hue.setPosition(mainWidth, 258 + 32 * 0);
-	penSize.setPosition(mainWidth, 258 + 32 * 1);
-	penAlpha.setPosition(mainWidth, 258 + 32 * 2);
-	eraserSize.setPosition(mainWidth, 258 + 32 * 1);
-	eraserAlpha.setPosition(mainWidth, 258 + 32 * 2);
-	penSwitch.setPosition(mainWidth, 258 + 32 * 4);
-	undo.setPosition(mainWidth, 258 + 32 * 5);
-	redo.setPosition(mainWidth, 258 + 32 * 6);
 	deleteAll.setPosition(mainWidth, 258 + 32 * 7);
 #endif // !__EMSCRIPTEN__
 
@@ -114,6 +117,7 @@ void Ui::placeUi(bool isPen) {
 		eraserAlpha.draw();
 	}
 	penSwitch.draw();
+	glowSwitch.draw();
 	undo.draw();
 	redo.draw();
 	deleteAll.draw();
