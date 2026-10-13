@@ -17,3 +17,7 @@ Thumbs.db
 # Web build outputs
 /bin/em/
 /frontend/public/engine/
+
+# Visual Studio build files
+*.exe
+*.pdb
