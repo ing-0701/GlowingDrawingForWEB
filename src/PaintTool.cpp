@@ -11,7 +11,7 @@ PaintTool::PaintTool(int mainWidth, int mainHeight) {
 
 	fbo2D.allocate(s);
 	preFbo2D.allocate(s);
-	redoFbo.allocate(s);
+	historySwapFbo.allocate(s);
 	glowCoreFbo.allocate(s);
 	preGlowFbo.allocate(s);
 	glowFbo1.allocate(s);
@@ -86,35 +86,53 @@ void PaintTool::drawCanvas(bool drawingFlag) {
 
 		glBlendFuncSeparate(
 			GL_ONE, GL_ONE,
-			GL_ZERO, GL_ONE
-		);
+			GL_ZERO, GL_ONE);
 
 		glowFbo2.draw(0, 0);
 
-	   glBlendFuncSeparate(
+		glBlendFuncSeparate(
 			GL_ONE, GL_ONE_MINUS_SRC_ALPHA,
-			GL_ONE, GL_ONE_MINUS_SRC_ALPHA
-	   );
+			GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	}
 #endif // __EMSCRIPTEN__
+}
 
-	
+void PaintTool::copyFbo(ofFbo & source, ofFbo & destination) {
+	ofPushStyle();
+
+	destination.begin();
+	ofClear(0, 0, 0, 0);
+	ofDisableAlphaBlending();
+	ofSetColor(255, 255, 255, 255);
+
+	source.draw(0, 0);
+
+	destination.end();
+
+	ofPopStyle();
+}
+
+void PaintTool::swapHistory(int index) {
+	ofFbo & target = (undoTargets[index] == 1) ? glowCoreFbo : fbo2D;
+
+	copyFbo(target, historySwapFbo);
+	copyFbo(undoFbos[index], target);
+	copyFbo(historySwapFbo, undoFbos[index]);
 }
 
 void PaintTool::saveUndo() {
-	undoFbos[undoWriteIndex].begin();
+	ofFbo & target = glowCanvas ? glowCoreFbo : fbo2D;
 
-	ofClear(0, 0, 0, 0);
-	ofSetColor(255, 255, 255, 255);
-	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	fbo2D.draw(0, 0);
+	copyFbo(target, undoFbos[undoWriteIndex]);
 
-	undoFbos[undoWriteIndex].end();
+	undoTargets[undoWriteIndex] = glowCanvas ? 1 : 0;
 
 	undoWriteIndex = (undoWriteIndex + 1) % UNDO_CAPACITY;
+
 	if (undoCount < UNDO_CAPACITY) {
 		undoCount++;
 	}
+	redoCount = 0;
 }
 
 void PaintTool::undo() {
@@ -122,31 +140,9 @@ void PaintTool::undo() {
 		return;
 	}
 
-	if (redoCount == 0) {
-		redoFbo.begin();
+	undoWriteIndex = (undoWriteIndex + UNDO_CAPACITY - 1) % UNDO_CAPACITY;
 
-		ofClear(0, 0, 0, 0);
-		ofSetColor(255, 255, 255, 255);
-		glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-		fbo2D.draw(0, 0);
-
-		redoFbo.end();
-	}
-
-	undoWriteIndex--;
-
-	if (undoWriteIndex < 0) {
-		undoWriteIndex = UNDO_CAPACITY - 1;
-	}
-
-	fbo2D.begin();
-
-	ofClear(0, 0, 0, 0);
-	ofSetColor(255, 255, 255, 255);
-	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	undoFbos[undoWriteIndex].draw(0, 0);
-
-	fbo2D.end();
+	swapHistory(undoWriteIndex);
 
 	undoCount--;
 	redoCount++;
@@ -157,34 +153,22 @@ void PaintTool::redo() {
 		return;
 	}
 
-	undoWriteIndex++;
+	swapHistory(undoWriteIndex);
 
-	if (undoWriteIndex == UNDO_CAPACITY) {
-		undoWriteIndex = 0;
-	}
-
-	fbo2D.begin();
-	ofClear(0, 0, 0, 0);
-	ofSetColor(255, 255, 255, 255);
-	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	if (redoCount == 1) {
-		redoFbo.draw(0, 0);
-	} else {
-		undoFbos[undoWriteIndex].draw(0, 0);
-	}
-	fbo2D.end();
+	undoWriteIndex = (undoWriteIndex + 1) % UNDO_CAPACITY;
 
 	undoCount++;
 	redoCount--;
 }
 
 void PaintTool::deleteAll() {
-	saveUndo();
-	fbo2D.begin();
-	ofClear(0, 0, 0, 0);
-	fbo2D.end();
+	ofFbo & target = glowCanvas ? glowCoreFbo : fbo2D;
 
-	redoCount = 0;
+	saveUndo();
+
+	target.begin();
+	ofClear(0, 0, 0, 0);
+	target.end();
 }
 
 #ifdef __EMSCRIPTEN__
@@ -195,7 +179,7 @@ void PaintTool::setupGlow() {
 	}
 }
 
-void PaintTool::blurInto(ofFbo& source, ofFbo& destination, float sigma, float strength) {
+void PaintTool::blurInto(ofFbo & source, ofFbo & destination, float sigma, float strength) {
 	ofPushStyle();
 
 	// 1回目：元画像を横方向にぼかす

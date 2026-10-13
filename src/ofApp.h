@@ -23,6 +23,7 @@ public:
 	void windowResized(int w, int h);
 	void dragEvent(ofDragInfo dragInfo);
 	void gotMessage(ofMessage msg);
+	void beforeDeleteAll();
 
 	const static int mainWidth = 800;
 	const static int mainHeight = 600;

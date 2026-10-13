@@ -64,7 +64,7 @@ void ofApp::setup() {
 
 	ui.undo.addListener(&paintTool, &PaintTool::undo);
 	ui.redo.addListener(&paintTool, &PaintTool::redo);
-	ui.deleteAll.addListener(&paintTool, &PaintTool::deleteAll);
+	ui.deleteAll.addListener(this, &ofApp::beforeDeleteAll);
 
 #ifdef __EMSCRIPTEN__
 #else
@@ -243,8 +243,6 @@ void ofApp::mouseReleased(int x, int y, int button) {
 		paintTool.preFbo2D.draw(0, 0, mainWidth, mainHeight);
 		destination.end();
 		paintTool.points.clear();
-
-		paintTool.redoCount = 0;
 	}
 
 	drawingFlag = false;
@@ -275,5 +273,20 @@ void ofApp::dragEvent(ofDragInfo dragInfo) {
 void ofApp::exit() {
 	ui.undo.removeListener(&paintTool, &PaintTool::undo);
 	ui.redo.removeListener(&paintTool, &PaintTool::redo);
-	ui.deleteAll.removeListener(&paintTool, &PaintTool::deleteAll);
+	ui.deleteAll.removeListener(this, &ofApp::beforeDeleteAll);
+}
+
+//--------------------------------------------------------------
+void ofApp::beforeDeleteAll() {
+	if (drawingFlag) {
+		return;
+	}
+
+#ifdef __EMSCRIPTEN__
+	paintTool.glowCanvas = false;
+#else
+	paintTool.glowCanvas = ui.glowSwitch;
+#endif // __EMSCRIPTEN__
+
+	paintTool.deleteAll();
 }
