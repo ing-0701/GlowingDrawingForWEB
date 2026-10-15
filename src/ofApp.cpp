@@ -7,6 +7,10 @@ EM_JS(int, getBackgroundBrightness, (), {
 	return window['paintBackgroundBrightness'] ?? 255;
 })
 
+EM_JS(int, getPaintColor, (), {
+	return window['paintColor'] ?? 0;
+	})
+
 EM_JS(double, getPenSize, (), {
 	return window['paintPenSize'] ?? 0.1;
 })
@@ -107,7 +111,7 @@ void ofApp::draw() {
 	} else {
 		paintTool.strokeSize = getEraserSize();
 	}
-	paintTool.color = ofColor(paintTool.color.r, paintTool.color.g, paintTool.color.b, getPenAlpha() * 255);
+	paintTool.color = ofColor::fromHex(getPaintColor(), getPenAlpha() * 255);
 	if (drawingFlag) {
 		paintTool.drawLine(isPen, getEraserAlpha() * 255);
 	}
@@ -124,8 +128,6 @@ void ofApp::draw() {
 	if (drawingFlag) {
 		paintTool.drawLine(isPen, ui.eraserAlpha * 255);
 	}
-#endif // __EMSCRIPTEN__
-	paintTool.drawCanvas(drawingFlag);
 
 	ofSetColor(100);
 	ofDrawRectangle(800, 256, 256, 344);
@@ -136,6 +138,9 @@ void ofApp::draw() {
 		ui.picking(ofGetMouseX(), ofGetMouseY(), mainWidth);
 		paintTool.color = ui.pickedColor;
 	}
+#endif // __EMSCRIPTEN__
+
+	paintTool.drawCanvas(drawingFlag);
 }
 
 //--------------------------------------------------------------
@@ -202,9 +207,11 @@ void ofApp::mousePressed(int x, int y, int button) {
 		paintTool.points.push_back(glm::vec2(x, y));
 	}
 
+#ifndef __EMSCRIPTEN__
 	if (mainWidth <= x && x < ofGetWidth() && 0 <= y && y < 256) {
 		pickerFlag = true;
 	}
+#endif // !__EMSCRIPTEN__
 }
 
 //--------------------------------------------------------------
@@ -221,7 +228,7 @@ void ofApp::mouseReleased(int x, int y, int button) {
 		} else {
 			paintTool.strokeSize = getEraserSize();
 		}
-		paintTool.color = ofColor(paintTool.color.r, paintTool.color.g, paintTool.color.b, getPenAlpha() * 255);
+		paintTool.color = ofColor::fromHex(getPaintColor(), getPenAlpha() * 255);
 		paintTool.drawLine(isPen, getEraserAlpha() * 255);
 #else
 		const bool isPen = ui.penSwitch;

@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
+import ColorPicker from './ColorPicker'
 
 type PaintCommand = 'undo' | 'redo' | 'deleteAll'
 
 type PaintWindow = Window & {
     paintBackgroundBrightness?: number
-    paintHue?: number
+    paintColor?: number
     paintPenSize?: number
     paintPenAlpha?: number
     paintEraserSize?: number
@@ -16,7 +17,7 @@ type PaintWindow = Window & {
 
 export default function OfViewer() {
     const [brightness, setBrightness] = useState(255)
-    const [hue, setHue] = useState(0)
+    const [color, setColor] = useState(0)
     const [penSize, setPenSize] = useState(0.1)
     const [penAlpha, setPenAlpha] = useState(1)
     const [eraserSize, setEraserSize] = useState(0.1)
@@ -34,11 +35,11 @@ export default function OfViewer() {
         }
     }
 
-    function sendHue(value: number) {
+    function sendColor(value: number) {
         const paintWindow = iframeRef.current?.contentWindow
 
         if (paintWindow) {
-            (paintWindow as PaintWindow).paintHue = value
+            (paintWindow as PaintWindow).paintColor = value
         }
     }
 
@@ -94,10 +95,10 @@ export default function OfViewer() {
         paintWindow.paintCommands.push(command)
     }
 
-    function sendGlowMode(value: boolean){
+    function sendGlowMode(value: boolean) {
         const paintWindow = iframeRef.current?.contentWindow
 
-        if(paintWindow){
+        if (paintWindow) {
             (paintWindow as PaintWindow).paintGlowMode = value
         }
     }
@@ -116,22 +117,6 @@ export default function OfViewer() {
                         const value = event.currentTarget.valueAsNumber
                         setBrightness(value)
                         sendBrightness(value)
-                    }}
-                />
-            </label>
-
-            <label style={{ display: 'block' }}>
-                色相:{hue}
-                <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    value={hue}
-                    onChange={(event) => {
-                        const value = event.currentTarget.valueAsNumber
-                        setHue(value)
-                        sendHue(value)
                     }}
                 />
             </label>
@@ -242,52 +227,48 @@ export default function OfViewer() {
                 </button>
             </div>
 
-            <iframe
-                ref={iframeRef}
-                title="openFrameworksのペイント画面"
-                src="/engine/index.html"
-                allowFullScreen
-                onLoad={(event) => {
-                    const iframe = event.currentTarget;
-
-                    sendBrightness(brightness);
-                    sendHue(hue);
-                    sendPenSize(penSize);
-                    sendPenAlpha(penAlpha);
-                    sendEraserSize(eraserSize);
-                    sendEraserAlpha(eraserAlpha);
-                    sendPenMode(isPen);
-                    sendGlowMode(isGlow);
-
-                    const content =
-                        iframe.contentDocument?.getElementById('engine-content');
-
-                    if (!content) return;
-
-                    const adjustHeight = () => {
-                        const height = content.getBoundingClientRect().height;
-                        iframe.style.height = `${Math.ceil(height)}px`;
-                    };
-
-                    adjustHeight();
-
-                    const observer = new ResizeObserver(adjustHeight);
-                    observer.observe(content);
-
-                    iframe.contentWindow?.addEventListener(
-                        'pagehide',
-                        () => observer.disconnect(),
-                        { once: true },
-                    );
-                }}
+            <div
                 style={{
-                    display: 'block',
-                    width: '1058px',
-                    height: '600px',
-                    border: 'none',
-                    background: '#fff',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 0,
+                    width: 'max-content',
                 }}
-            />
+            >
+                <iframe
+                    ref={iframeRef}
+                    title="openFrameworksのペイント画面"
+                    src="/engine/index.html"
+                    width={800}
+                    height={600}
+                    allowFullScreen
+                    onLoad={() => {
+                        sendBrightness(brightness);
+                        sendColor(color);
+                        sendPenSize(penSize);
+                        sendPenAlpha(penAlpha);
+                        sendEraserSize(eraserSize);
+                        sendEraserAlpha(eraserAlpha);
+                        sendPenMode(isPen);
+                        sendGlowMode(isGlow);
+                    }}
+                    style={{
+                        display: 'block',
+                        width: '800px',
+                        height: '600px',
+                        flexShrink: 0,
+                        border: 'none',
+                        background: '#fff',
+                    }}
+                />
+
+                <ColorPicker
+                    onChange={(nextColor) => {
+                        setColor(nextColor)
+                        sendColor(nextColor)
+                    }}
+                />
+            </div>
         </section>
     )
 }

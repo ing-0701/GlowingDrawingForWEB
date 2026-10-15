@@ -20,9 +20,10 @@ div.emscripten {
 }
 
 div.emscripten_border{
-  width:fit-content;
-  margin: 0 auto;
-  border: 1px solid #888;
+  width: 800px;
+  height: 600px;
+  margin: 0;
+  border: none;
 }
 
 /* The canvas must not have any border or padding, or mouse coords will be wrong */
@@ -124,4 +125,46 @@ canvas.emscripten {
   color: white;
   font-family: 'Lucida Console', Monaco, monospace;
   outline: none;
+}
+
+html,
+body {
+  width: 800px;
+  height: 600px;
+  overflow: hidden;
+}
+
+#engine-content {
+  position: relative;
+  width: 800px;
+  height: 600px;
+}
+
+canvas.emscripten {
+  display: block;
+  width: 800px;
+  height: 600px;
+  margin: 0;
+}
+
+/* 読み込み表示でcanvasの位置が下にずれないようにする */
+#header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+#engine-content > div.emscripten {
+  position: absolute;
+  top: 64px;
+  left: 20px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* 読み込み完了後、空のstatusが余白を残さないようにする */
+#status:empty {
+  display: none;
 }

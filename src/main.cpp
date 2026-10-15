@@ -11,7 +11,12 @@ int main( ){
 
 	//Use ofGLFWWindowSettings for more options like multi-monitor fullscreen
 	ofGLWindowSettings settings;
-	settings.setSize(800+256, 600);
+#ifdef __EMSCRIPTEN__
+	settings.setSize(800, 600);
+#else
+	settings.setSize(800 + 256, 600);
+#endif // __EMSCRIPTEN__
+
 	settings.windowMode = OF_WINDOW; //can also be OF_FULLSCREEN
 
 	auto window = ofCreateWindow(settings);
