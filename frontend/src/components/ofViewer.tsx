@@ -10,6 +10,7 @@ type PaintWindow = Window & {
     paintEraserSize?: number
     paintEraserAlpha?: number
     paintPenMode?: boolean
+    paintGlowMode?: boolean
     paintCommands?: PaintCommand[]
 }
 
@@ -21,6 +22,7 @@ export default function OfViewer() {
     const [eraserSize, setEraserSize] = useState(0.1)
     const [eraserAlpha, setEraserAlpha] = useState(1)
     const [isPen, setIsPen] = useState(true)
+    const [isGlow, setIsGlow] = useState(false)
 
     const iframeRef = useRef<HTMLIFrameElement>(null)
 
@@ -90,6 +92,14 @@ export default function OfViewer() {
         }
 
         paintWindow.paintCommands.push(command)
+    }
+
+    function sendGlowMode(value: boolean){
+        const paintWindow = iframeRef.current?.contentWindow
+
+        if(paintWindow){
+            (paintWindow as PaintWindow).paintGlowMode = value
+        }
     }
 
     return (
@@ -204,6 +214,20 @@ export default function OfViewer() {
                 }
             </button>
 
+            <button
+                type="button"
+                onClick={() => {
+                    const nextIsGlow = !isGlow
+                    setIsGlow(nextIsGlow)
+                    sendGlowMode(nextIsGlow)
+                }}
+            >
+                {isGlow
+                    ? '現在：発光キャンバス（通常に切り替える）'
+                    : '現在：通常キャンバス（発光に切り替える）'
+                }
+            </button>
+
             <div>
                 <button type="button" onClick={() => sendCommand('undo')}>
                     UNDO
@@ -233,6 +257,7 @@ export default function OfViewer() {
                     sendEraserSize(eraserSize);
                     sendEraserAlpha(eraserAlpha);
                     sendPenMode(isPen);
+                    sendGlowMode(isGlow);
 
                     const content =
                         iframe.contentDocument?.getElementById('engine-content');

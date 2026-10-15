@@ -25,10 +25,6 @@ PaintTool::PaintTool(int mainWidth, int mainHeight) {
 	glowCoreFbo.begin();
 	ofClear(0, 0, 0, 0);
 	glowCoreFbo.end();
-
-#ifdef __EMSCRIPTEN__
-#else
-#endif // __EMSCRIPTEN__
 }
 
 void PaintTool::drawLine(bool penSwitch, float eraserAlpha) {
@@ -67,8 +63,6 @@ void PaintTool::drawCanvas(bool drawingFlag) {
 	ofFbo & normalSource = (drawingFlag && !glowCanvas) ? preFbo2D : fbo2D;
 	ofFbo & glowSource = (drawingFlag && glowCanvas) ? preFbo2D : glowCoreFbo;
 
-#ifdef __EMSCRIPTEN__
-#else
 	const bool canDrawGlow = glowShader.isLoaded();
 
 	if (canDrawGlow && glowNeedUpdate) {
@@ -77,7 +71,6 @@ void PaintTool::drawCanvas(bool drawingFlag) {
 	}
 
 	glowNeedUpdate = false;
-#endif // __EMSCRIPTEN__
 
 	ofEnableAlphaBlending();
 	ofSetColor(255, 255, 255, 255);
@@ -85,9 +78,6 @@ void PaintTool::drawCanvas(bool drawingFlag) {
 	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	normalSource.draw(0, 0);
 
-#ifdef __EMSCRIPTEN__
-	glowSource.draw(0, 0);
-#else
 	if (canDrawGlow) {
 		glowFbo1.draw(0, 0);
 
@@ -114,7 +104,6 @@ void PaintTool::drawCanvas(bool drawingFlag) {
 			GL_ONE, GL_ONE_MINUS_SRC_ALPHA,
 			GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	}
-#endif // __EMSCRIPTEN__
 }
 
 void PaintTool::copyFbo(ofFbo & source, ofFbo & destination) {
@@ -195,25 +184,19 @@ void PaintTool::deleteAll() {
 	target.end();
 
 	if (glowCanvas) {
-		glowFbo1.begin();
-		ofClear(0, 0, 0, 0);
-		glowFbo1.end();
-
-		glowFbo2.begin();
-		ofClear(0, 0, 0, 0);
-		glowFbo2.end();
+		glowNeedUpdate = true;
 	}
 }
 
-#ifdef __EMSCRIPTEN__
-#else
-void PaintTool::setupGlow() {
-	if (!glowShader.load("shaders/glowBlur")) {
-		ofLogError("PaintTool") << "Failed to load glow shader";
-	}
 
-	if (glowCanvas) {
-		glowNeedUpdate = true;
+void PaintTool::setupGlow() {
+#ifdef __EMSCRIPTEN__
+	const bool loaded = glowShader.load("shaders/glowBlurWeb");
+#else
+	const bool loaded = glowShader.load("shaders/glowBlur");
+#endif // __EMSCRIPTEN__
+	if (!loaded) {
+		ofLogError("PaintTool") << "Failed to load glow shader";
 	}
 }
 
@@ -257,4 +240,3 @@ void PaintTool::blurInto(ofFbo & source, ofFbo & destination, float sigma, float
 
 	ofPopStyle();
 }
-#endif // __EMSCRIPTEN__

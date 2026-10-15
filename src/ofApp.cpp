@@ -33,6 +33,10 @@ EM_JS(int, getPenMode, (), {
 	return 1;
 })
 
+EM_JS(int, getGlowMode, (), {
+	return window['paintGlowMode'] === true ? 1 : 0;
+})
+
 EM_JS(int, takePaintCommand, (), {
 	const commands = window['paintCommands'];
 
@@ -66,10 +70,7 @@ void ofApp::setup() {
 	ui.redo.addListener(&paintTool, &PaintTool::redo);
 	ui.deleteAll.addListener(this, &ofApp::beforeDeleteAll);
 
-#ifdef __EMSCRIPTEN__
-#else
 	paintTool.setupGlow();
-#endif // __EMSCRIPTEN__
 }
 
 //--------------------------------------------------------------
@@ -87,7 +88,7 @@ void ofApp::update() {
 		} else if (command == 2) {
 			paintTool.redo();
 		} else if (command == 3) {
-			paintTool.deleteAll();
+			beforeDeleteAll();
 		}
 
 		command = takePaintCommand();
@@ -192,7 +193,7 @@ void ofApp::mousePressed(int x, int y, int button) {
 
 	if (0 <= x && x < mainWidth && 0 <= y && y < mainHeight) {
 #ifdef __EMSCRIPTEN__
-		paintTool.glowCanvas = false;
+		paintTool.glowCanvas = getGlowMode() != 0;
 #else
 		paintTool.glowCanvas = ui.glowSwitch;
 #endif // __EMSCRIPTEN__
@@ -283,7 +284,7 @@ void ofApp::beforeDeleteAll() {
 	}
 
 #ifdef __EMSCRIPTEN__
-	paintTool.glowCanvas = false;
+	paintTool.glowCanvas = getGlowMode() != 0;
 #else
 	paintTool.glowCanvas = ui.glowSwitch;
 #endif // __EMSCRIPTEN__
