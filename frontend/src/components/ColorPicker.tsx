@@ -180,9 +180,34 @@ export default function ColorPicker({ onChange }: Props) {
                 />
             </div>
 
-            <label style={{ display: 'block', marginTop: 8 }}>
-                色相
+            {/* カラーコードのテキスト表示 */}
+            {/* 当面使わなさそうなのでいったんコメントアウト */}
+            {/* <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginTop: 8,
+                    padding: '0 12px',
+                }}
+            >
+                <span
+                    aria-hidden="true"
+                    style={{
+                        display: 'inline-block',
+                        width: 24,
+                        height: 24,
+                        background: colorHex,
+                        border: '1px solid #fff',
+                    }}
+                />
+                <output aria-label="選択色">{colorHex}</output>
+            </div> */}
+
+            <label style={{ display: 'block', marginTop: 8, padding: '0 12px' }}>
+                Hue
                 <input
+                    className="hue-range"
                     type="range"
                     min={0}
                     max={1}
@@ -194,30 +219,8 @@ export default function ColorPicker({ onChange }: Props) {
                             hue: event.currentTarget.valueAsNumber,
                         })
                     }}
-                    style={{ display: 'block', width: '100%' }}
                 />
             </label>
-
-            <div
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    marginTop: 8,
-                }}
-            >
-                <span
-                    aria-hidden="true"
-                    style={{
-                        display: 'inline-block',
-                        width: 24,
-                        height: 24,
-                        background: colorHex,
-                        border: '1px solid #888',
-                    }}
-                />
-                <output aria-label="選択色">{colorHex}</output>
-            </div>
         </div>
     )
 }

@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
 import ColorPicker from './ColorPicker'
+import './ofViewer.css'
+import { rangeStyle } from './rangeStyle'
 
 type PaintCommand = 'undo' | 'redo' | 'deleteAll'
 
@@ -24,6 +26,7 @@ export default function OfViewer() {
     const [eraserAlpha, setEraserAlpha] = useState(1)
     const [isPen, setIsPen] = useState(true)
     const [isGlow, setIsGlow] = useState(false)
+    const [showUi, setShowUi] = useState(true)
 
     const iframeRef = useRef<HTMLIFrameElement>(null)
 
@@ -104,138 +107,64 @@ export default function OfViewer() {
     }
 
     return (
-        <section style={{ width: '100%', padding: '0 0' }}>
-            <label style={{ display: 'block' }}>
-                背景の明るさ:{brightness}
-                <input
-                    type="range"
-                    min={0}
-                    max={255}
-                    step={1}
-                    value={brightness}
-                    onChange={(event) => {
-                        const value = event.currentTarget.valueAsNumber
-                        setBrightness(value)
-                        sendBrightness(value)
-                    }}
-                />
-            </label>
+        <section className='drawing-app'>
+            <header className='drawing-header'>
+                <h1 className='drawing-title'>
+                    GlowingDrawing
+                </h1>
 
-            <label style={{ display: 'block' }}>
-                ペンの太さ:{penSize}
-                <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    value={penSize}
-                    onChange={(event) => {
-                        const value = event.currentTarget.valueAsNumber
-                        setPenSize(value)
-                        sendPenSize(value)
-                    }}
-                />
-            </label>
+                <div className='drawing-header-actions'>
+                    <button
+                        type="button"
+                        title={
+                            isPen
+                                ? '現在：ペン（消しゴムに切り替える）'
+                                : '現在：消しゴム（ペンに切り替える）'
+                        }
+                        onClick={() => {
+                            const nextIsPen = !isPen
+                            setIsPen(nextIsPen)
+                            sendPenMode(nextIsPen)
+                        }}
+                    >
+                        {isPen ? 'Pen' : 'Eraser'}
+                    </button>
 
-            <label style={{ display: 'block' }}>
-                ペンの透明度:{penAlpha}
-                <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    value={penAlpha}
-                    onChange={(event) => {
-                        const value = event.currentTarget.valueAsNumber
-                        setPenAlpha(value)
-                        sendPenAlpha(value)
-                    }}
-                />
-            </label>
+                    <button
+                        type="button"
+                        className='drawing-glow-button'
+                        aria-pressed={isGlow}
+                        title={
+                            isGlow
+                                ? '現在：発光キャンバス（通常に切り替える）'
+                                : '現在：通常キャンバス（発光に切り替える）'
+                        }
+                        onClick={() => {
+                            const nextIsGlow = !isGlow
+                            setIsGlow(nextIsGlow)
+                            sendGlowMode(nextIsGlow)
+                        }}
+                    >
+                        {isGlow ? 'GlowMode' : 'NormalMode'}
+                    </button>
 
-            <label style={{ display: 'block' }}>
-                消しゴムの太さ:{eraserSize}
-                <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    value={eraserSize}
-                    onChange={(event) => {
-                        const value = event.currentTarget.valueAsNumber
-                        setEraserSize(value)
-                        sendEraserSize(value)
-                    }}
-                />
-            </label>
+                    <button
+                        type='button'
+                        aria-expanded={showUi}
+                        aria-controls='drawing-sidebar'
+                        title={showUi ? 'UIを非表示にする' : 'UIを表示する'}
+                        onClick={() => {
+                            setShowUi((current) => !current)
+                        }}
+                    >
+                        UI
+                    </button>
+                </div>
+            </header>
 
-            <label style={{ display: 'block' }}>
-                消しゴムの透明度:{eraserAlpha}
-                <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    value={eraserAlpha}
-                    onChange={(event) => {
-                        const value = event.currentTarget.valueAsNumber
-                        setEraserAlpha(value)
-                        sendEraserAlpha(value)
-                    }}
-                />
-            </label>
-
-            <button
-                type="button"
-                onClick={() => {
-                    const nextIsPen = !isPen
-                    setIsPen(nextIsPen)
-                    sendPenMode(nextIsPen)
-                }}
-            >
-                {isPen
-                    ? '現在：ペン（消しゴムに切り替える）'
-                    : '現在：消しゴム（ペンに切り替える）'
-                }
-            </button>
-
-            <button
-                type="button"
-                onClick={() => {
-                    const nextIsGlow = !isGlow
-                    setIsGlow(nextIsGlow)
-                    sendGlowMode(nextIsGlow)
-                }}
-            >
-                {isGlow
-                    ? '現在：発光キャンバス（通常に切り替える）'
-                    : '現在：通常キャンバス（発光に切り替える）'
-                }
-            </button>
-
-            <div>
-                <button type="button" onClick={() => sendCommand('undo')}>
-                    UNDO
-                </button>
-
-                <button type="button" onClick={() => sendCommand('redo')}>
-                    REDO
-                </button>
-
-                <button type="button" onClick={() => sendCommand('deleteAll')}>
-                    全消し
-                </button>
-            </div>
-
-            <div
-                style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 0,
-                    width: 'max-content',
-                }}
-            >
+            <div className={showUi ? 'drawing-body' : 'drawing-body drawing-body--ui-hidden'}>
                 <iframe
+                    className='drawing-frame'
                     ref={iframeRef}
                     title="openFrameworksのペイント画面"
                     src="/engine/index.html"
@@ -252,22 +181,109 @@ export default function OfViewer() {
                         sendPenMode(isPen);
                         sendGlowMode(isGlow);
                     }}
-                    style={{
-                        display: 'block',
-                        width: '800px',
-                        height: '600px',
-                        flexShrink: 0,
-                        border: 'none',
-                        background: '#fff',
-                    }}
                 />
 
-                <ColorPicker
-                    onChange={(nextColor) => {
-                        setColor(nextColor)
-                        sendColor(nextColor)
-                    }}
-                />
+                <aside
+                    id='drawing-slidebar'
+                    className='drawing-sidebar'
+                    aria-label='描画設定'
+                    hidden={!showUi}
+                >
+                    <ColorPicker
+                        onChange={(nextColor) => {
+                            setColor(nextColor)
+                            sendColor(nextColor)
+                        }}
+                    />
+
+                    <div className='drawing-controls'>
+                        <label className='drawing-field'>
+                            <span>
+                                Size
+                                :{isPen ? penSize : eraserSize}
+                            </span>
+
+                            <input
+                                type="range"
+                                min={0}
+                                max={1}
+                                step={0.01}
+                                value={isPen ? penSize : eraserSize}
+                                style={rangeStyle(isPen ? penSize : eraserSize)}
+                                onChange={(event) => {
+                                    const value = event.currentTarget.valueAsNumber
+                                    if (isPen) {
+                                        setPenSize(value)
+                                        sendPenSize(value)
+                                    } else {
+                                        setEraserSize(value)
+                                        sendEraserSize(value)
+                                    }
+                                }}
+                            />
+                        </label>
+
+                        <label className='drawing-field'>
+                            <span>
+                                Alpha
+                                :{isPen ? penAlpha : eraserAlpha}
+                            </span>
+                            <input
+                                type="range"
+                                min={0}
+                                max={1}
+                                step={0.01}
+                                value={isPen ? penAlpha : eraserAlpha}
+                                style={rangeStyle(isPen ? penAlpha : eraserAlpha)}
+                                onChange={(event) => {
+                                    const value = event.currentTarget.valueAsNumber
+
+                                    if (isPen) {
+                                        setPenAlpha(value)
+                                        sendPenAlpha(value)
+                                    } else {
+                                        setEraserAlpha(value)
+                                        sendEraserAlpha(value)
+                                    }
+                                }}
+                            />
+                        </label>
+
+                        <div className='drawing-history'>
+                            <button type="button" onClick={() => sendCommand('undo')}>
+                                UNDO
+                            </button>
+
+                            <button type="button" onClick={() => sendCommand('redo')}>
+                                REDO
+                            </button>
+                        </div>
+
+                        <button type="button" onClick={() => sendCommand('deleteAll')}>
+                            DELETE ALL
+                        </button>
+
+                        <label className='drawing-field'>
+                            <span>
+                                Background:{brightness}
+                            </span>
+
+                            <input
+                                type="range"
+                                min={0}
+                                max={255}
+                                step={1}
+                                value={brightness}
+                                style={rangeStyle(brightness, 0, 255)}
+                                onChange={(event) => {
+                                    const value = event.currentTarget.valueAsNumber
+                                    setBrightness(value)
+                                    sendBrightness(value)
+                                }}
+                            />
+                        </label>
+                    </div>
+                </aside>
             </div>
         </section>
     )

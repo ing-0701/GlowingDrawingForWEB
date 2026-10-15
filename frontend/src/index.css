@@ -1,15 +1,15 @@
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --text: #fff; /* 通常の文字色：白 */
+  --text-h: #fff; /* 見出し・コード表示などの共通文字色：白 */
+  --bg: #282828; /* ページ全体の背景：暗い灰色 */
+  --panel-bg: #303030; /* 描画アプリ・ヘッダー・右側UIの背景：灰色 */
+  --border: #fff; /* この変数を参照する枠線の色：白 */
+  --code-bg: #383838; /* code要素の背景：灰色 */
+  --accent: #fff; /* この変数を参照する強調色・フォーカス枠：白 */
+  --accent-bg: rgba(255, 255, 255, 0.08); /* 変数を参照する強調背景：不透明度8%の白 */
+  --accent-border: #fff; /* 変数を参照する強調枠線：白 */
+  --social-bg: #383838; /* App.cssのリンク部品などが使う背景：灰色 */
+  --shadow: 0 0 12px rgba(255, 255, 255, 0.12); /* 変数を参照する部品の光：不透明度12%の白 */
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -17,9 +17,9 @@
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
+  color-scheme: dark; /* ブラウザ標準UIに暗い配色を指定する */
+  color: var(--text); /* ページ全体の標準文字色 */
+  background: var(--bg); /* ページ全体の背景色 */
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -30,32 +30,12 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
 #root {
   width: 1060px;
   max-width: 100%;
   margin: 0 auto;
   text-align: center;
-  border-inline: 1px solid var(--border);
+  border-inline: none;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
@@ -70,7 +50,7 @@ h1,
 h2 {
   font-family: var(--heading);
   font-weight: 500;
-  color: var(--text-h);
+  color: var(--text-h); /* h1・h2見出しの文字色 */
 }
 
 h1 {
@@ -104,12 +84,12 @@ code,
   font-family: var(--mono);
   display: inline-flex;
   border-radius: 4px;
-  color: var(--text-h);
+  color: var(--text-h); /* code要素・既存counter部品の文字色 */
 }
 
 code {
   font-size: 15px;
   line-height: 135%;
   padding: 4px 8px;
-  background: var(--code-bg);
+  background: var(--code-bg); /* code要素の背景色 */
 }

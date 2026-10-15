@@ -1,0 +1,297 @@
+.drawing-app {
+    width: 1060px;
+    text-align: left;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+    /* アプリ全体の標準文字色 */
+    background: var(--panel-bg);
+    /* アプリ全体の下地の色 */
+
+    /* 文字をうっすら光らせる */
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+    /* 文字の周囲の光：不透明度20%の白 */
+}
+
+.drawing-app,
+.drawing-app * {
+    box-sizing: border-box;
+}
+
+/* ヘッダー */
+.drawing-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 64px;
+    padding: 12px 16px;
+    background-color: var(--panel-bg);
+    /* タイトルと切り替えボタンを置くヘッダーの背景 */
+}
+
+.drawing-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: normal;
+    color: #fff;
+    /* GlowingDrawingのタイトル文字：白 */
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
+    /* タイトルの光：不透明度35%の白 */
+}
+
+.drawing-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+/* 左にキャンバス、右にUI */
+.drawing-body {
+    display: flex;
+    align-items: flex-start;
+}
+
+/* iframe内の描画領域800×600を維持し、外側に枠を付ける */
+.drawing-frame {
+    display: block;
+    box-sizing: content-box;
+    width: 800px;
+    height: 600px;
+    flex: 0 0 800px;
+    padding: 0;
+    border: 1px solid #fff;
+    /* 描画キャンバスを囲む枠：白 */
+    background: #fff;
+    /* iframe要素の下地：白。oFが描く背景色はBackgroundで別途指定 */
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+    /* キャンバス外周の光：不透明度15%の白 */
+}
+
+/* 右側UIは全体を1つの枠で囲む */
+.drawing-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    box-sizing: content-box;
+    width: 256px;
+    min-height: 600px;
+    flex: 0 0 256px;
+
+    border: 1px solid #fff;
+    /* 右側UI全体を囲む枠：白 */
+    background-color: var(--panel-bg);
+    /* カラーピッカーと各設定を置く右側UIの背景 */
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+    /* 右側UI外周の光：不透明度15%の白 */
+}
+
+/* 個々の設定項目には枠を付けず、縦に並べる */
+.drawing-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 12px 12px;
+}
+
+.drawing-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* UNDO / REDO */
+.drawing-history {
+    display: flex;
+    gap: 8px;
+}
+
+.drawing-history>button {
+    flex: 1;
+}
+
+/* ボタンにも個別の枠は付けない */
+.drawing-app button {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 4px;
+    background: #3a3a3a;
+    /* 切り替え・UNDO・REDO・全消しボタンの通常背景：灰色 */
+    color: #fff;
+    /* ボタンの文字：白 */
+    font: inherit;
+    text-shadow: inherit;
+    /* ボタンの文字にもアプリ全体の光を引き継ぐ */
+    cursor: pointer;
+}
+
+.drawing-app button:hover {
+    background: #494949;
+    /* マウスを重ねたボタンの背景：少し明るい灰色 */
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+    /* マウスを重ねたボタンの光：不透明度15%の白 */
+}
+
+.drawing-app button:focus-visible {
+    outline: 2px solid #fff;
+    /* キーボードで選択中のボタンを示す枠：白 */
+    outline-offset: 3px;
+}
+
+/* 選択色コード */
+.drawing-app output {
+    color: #fff;
+    /* 選択色のカラーコード文字：白 */
+    font-family: var(--mono);
+}
+
+/* 全スライダー共通 */
+.drawing-app input[type='range'] {
+    -webkit-appearance: none;
+    appearance: none;
+
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    height: 16px;
+    padding: 0;
+    margin: 4px 0;
+
+    border: none;
+    border-radius: 2px;
+    outline: 1px solid #fff;
+    /* スライダー全周の細い枠：白 */
+    outline-offset: 0;
+
+    /* 最小値のとき、および背景画像がない場合の下地 */
+    background-color: #000;
+
+    /* 現在値より右側の暗い覆い・グラデーションの2層 */
+    background-image: var(--range-background, none);
+
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+
+    background-position: left top;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.12);
+    /* スライダー外周の光：不透明度12%の白 */
+    cursor: pointer;
+}
+
+/* Chrome / Edge / Safari：バー */
+.drawing-app input[type='range']::-webkit-slider-runnable-track {
+    height: 16px;
+    border: none;
+    border-radius: 2px;
+    background: transparent;
+    /* Chrome系の標準バーを透明にして、input側の塗り分けを見せる */
+}
+
+/* Chrome / Edge / Safari：現在値のつまみ */
+.drawing-app input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+
+    box-sizing: border-box;
+    width: 16px;
+    height: 16px;
+    margin-top: 0;
+
+    border: none;
+    border-radius: 2px;
+    background: #fff;
+    /* Chrome系の現在値のつまみ：白 */
+    box-shadow: 0 0 7px rgba(255, 255, 255, 0.5);
+    /* Chrome系のつまみの光：不透明度50%の白 */
+    cursor: ew-resize;
+}
+
+/* Firefox：バー */
+.drawing-app input[type='range']::-moz-range-track {
+    height: 16px;
+    border: none;
+    border-radius: 2px;
+    background: transparent;
+    /* Firefoxの標準バーを透明にして、input側の塗り分けを見せる */
+}
+
+/* Firefox標準の塗りつぶしを消し、共通の背景を見せる */
+.drawing-app input[type='range']::-moz-range-progress {
+    height: 16px;
+    border: none;
+    background: transparent;
+    /* Firefoxの最小値〜現在値の標準塗りつぶしを透明にする */
+}
+
+/* Firefox：現在値のつまみ */
+.drawing-app input[type='range']::-moz-range-thumb {
+    box-sizing: border-box;
+    width: 16px;
+    height: 16px;
+
+    border: none;
+    border-radius: 2px;
+    background: #fff;
+    /* Firefoxの現在値のつまみ：白 */
+    box-shadow: 0 0 7px rgba(255, 255, 255, 0.5);
+    /* Firefoxのつまみの光：不透明度50%の白 */
+    cursor: ew-resize;
+}
+
+.drawing-app input[type='range']:focus-visible {
+    outline: 2px solid #fff;
+    /* キーボードで選択中のスライダーを示す枠：白 */
+    outline-offset: 3px;
+}
+
+/* UIが非表示のとき、iframeを本文領域の中央へ配置する */
+.drawing-body--ui-hidden {
+    justify-content: center;
+}
+
+/* 既存のdisplay: flexより優先して右側UIを隠す */
+.drawing-sidebar[hidden] {
+    display: none;
+}
+
+/* 発光モードがオンのときのボタン */
+.drawing-app .drawing-glow-button[aria-pressed='true'] {
+    background: #eee; /* オンの背景：明るい灰色 */
+    color: #222; /* 明るい背景でも読みやすい暗い文字 */
+    text-shadow: none;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+    /* オンのボタン周囲の光：不透明度40%の白 */
+}
+
+/* オンの状態でマウスを重ねたとき */
+.drawing-app .drawing-glow-button[aria-pressed='true']:hover {
+    background: #fff; /* ホバー時の背景：白 */
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.55);
+    /* ホバー時の光：不透明度55%の白 */
+}
+
+/* Hue専用：各位置の色相をバーに表示する */
+.drawing-app input[type='range'].hue-range {
+    /* グラデーション外側の左右8pxも、両端と同じ赤にする */
+    background-color: #f00;
+
+    background-image: linear-gradient(
+        to right,
+        #f00 0%,          /* 赤：色相0° */
+        #ff0 16.666667%,  /* 黄：色相60° */
+        #0f0 33.333333%,  /* 緑：色相120° */
+        #0ff 50%,         /* シアン：色相180° */
+        #00f 66.666667%,  /* 青：色相240° */
+        #f0f 83.333333%,  /* マゼンタ：色相300° */
+        #f00 100%        /* 赤：色相360° */
+    );
+
+    /* つまみ幅16pxを考慮し、色とつまみの中心位置を合わせる */
+    background-size: calc(100% - 16px) 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
