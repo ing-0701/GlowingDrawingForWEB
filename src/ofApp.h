@@ -32,4 +32,12 @@ public:
 	ofPixels pixels;
 
 	Ui ui = Ui(mainWidth);
+
+	// Windows版のUIは本質じゃないので未確認
+	// 余裕があるときに確認されたし
+	void mouseScrolled(
+		int x,
+		int y,
+		float scrollX,
+		float scrollY) override;
 };

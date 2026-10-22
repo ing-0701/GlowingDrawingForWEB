@@ -64,17 +64,20 @@ bool pickerFlag = false;
 
 //--------------------------------------------------------------
 void ofApp::setup() {
-	ofSetFrameRate(60);
+	ofLogToConsole(); // ログの出力先をコンソールに設定
 
-	paintTool.fbo2D.begin();
-	ofClear(0, 0, 0, 0);
-	paintTool.fbo2D.end();
+	ofSetFrameRate(60);
 
 	ui.undo.addListener(&paintTool, &PaintTool::undo);
 	ui.redo.addListener(&paintTool, &PaintTool::redo);
 	ui.deleteAll.addListener(this, &ofApp::beforeDeleteAll);
 
-	paintTool.setupGlow();
+	const int initialLayerId = paintTool.addLayer(LayerType::Normal, false);
+
+		ofLogNotice("Layers")
+		<< "Created Layer" << initialLayerId
+		<< ", count=" << paintTool.layers.size()
+		<< ", selected=" << paintTool.selectedLayerId;
 }
 
 //--------------------------------------------------------------
@@ -141,6 +144,12 @@ void ofApp::draw() {
 #endif // __EMSCRIPTEN__
 
 	paintTool.drawCanvas(drawingFlag);
+
+#ifndef __EMSCRIPTEN__
+	ui.drawLayerPanel(
+		paintTool.layers,
+		paintTool.selectedLayerId);
+#endif
 }
 
 //--------------------------------------------------------------
@@ -196,12 +205,40 @@ void ofApp::mousePressed(int x, int y, int button) {
 		return;
 	}
 
+#ifndef __EMSCRIPTEN__
+	if (!drawingFlag) {
+		const LayerUiAction action = ui.pressLayerPanel(x, y, paintTool.layers);
+
+		switch (action.type) {
+		case LayerUiActionType::Select:
+			paintTool.selectedLayerId = action.layerId;
+			return;
+
+		case LayerUiActionType::AddNormal:
+			paintTool.addLayer(LayerType::Normal);
+			return;
+
+		case LayerUiActionType::AddGlow:
+			paintTool.addLayer(LayerType::Glow);
+			return;
+
+		case LayerUiActionType::Delete:
+			paintTool.deleteLayer(action.layerId);
+
+			// 削除後の枚数に合わせてスクロール位置を補正する
+			ui.scrollLayerPanel(0.0f, static_cast<int>(paintTool.layers.size()));
+			return;
+
+		case LayerUiActionType::Move:
+		case LayerUiActionType::None:
+			break;
+		}
+	}
+#endif
+
 	if (0 <= x && x < mainWidth && 0 <= y && y < mainHeight) {
-#ifdef __EMSCRIPTEN__
-		paintTool.glowCanvas = getGlowMode() != 0;
-#else
-		paintTool.glowCanvas = ui.glowSwitch;
-#endif // __EMSCRIPTEN__
+
+		paintTool.strokeLayerId = paintTool.selectedLayerId;
 
 		drawingFlag = true;
 		paintTool.points.push_back(glm::vec2(x, y));
@@ -219,6 +256,19 @@ void ofApp::mouseReleased(int x, int y, int button) {
 	if (button != OF_MOUSE_BUTTON_LEFT) {
 		return;
 	}
+
+#ifndef __EMSCRIPTEN__
+	const LayerUiAction action = ui.releaseLayerPanel(
+		x,
+		y,
+		static_cast<int>(paintTool.layers.size()));
+
+	if (action.type == LayerUiActionType::Move) {
+		paintTool.moveLayer(
+			action.layerId,
+			action.destinationIndex);
+	}
+#endif
 
 	if (drawingFlag) {
 #ifdef __EMSCRIPTEN__
@@ -241,16 +291,7 @@ void ofApp::mouseReleased(int x, int y, int button) {
 		paintTool.drawLine(isPen, ui.eraserAlpha * 255);
 #endif
 
-		ofFbo & destination = paintTool.glowCanvas ? paintTool.glowCoreFbo : paintTool.fbo2D;
-
-		paintTool.saveUndo();
-		destination.begin();
-		ofClear(0, 0, 0, 0);
-		ofSetColor(255, 255, 255, 255);
-		glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-		paintTool.preFbo2D.draw(0, 0, mainWidth, mainHeight);
-		destination.end();
-		paintTool.points.clear();
+		paintTool.commitStroke();
 	}
 
 	drawingFlag = false;
@@ -290,11 +331,27 @@ void ofApp::beforeDeleteAll() {
 		return;
 	}
 
-#ifdef __EMSCRIPTEN__
-	paintTool.glowCanvas = getGlowMode() != 0;
-#else
-	paintTool.glowCanvas = ui.glowSwitch;
-#endif // __EMSCRIPTEN__
-
 	paintTool.deleteAll();
+}
+
+//--------------------------------------------------------------
+void ofApp::mouseScrolled(
+	int x, int y, float scrollX, float scrollY) {
+#ifndef __EMSCRIPTEN__
+	if (drawingFlag) {
+		return;
+	}
+
+	// レイヤー一覧が表示されている領域
+	const ofRectangle listArea(
+		mainWidth + 104, 386,
+		148, 46 * 4);
+
+	// レイヤー一覧の上でスクロールした場合だけ処理する
+	if (listArea.inside(x, y)) {
+		ui.scrollLayerPanel(
+			scrollY,
+			static_cast<int>(paintTool.layers.size()));
+	}
+#endif
 }
