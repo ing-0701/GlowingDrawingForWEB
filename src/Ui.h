@@ -3,6 +3,26 @@
 #include "ofMain.h"
 #include "ofxGui.h"
 
+#include "Layer.h"
+
+#include <memory>
+#include <vector>
+
+enum class LayerUiActionType {
+	None,
+	Select,
+	AddNormal,
+	AddGlow,
+	Move,
+	Delete
+};
+
+struct LayerUiAction {
+	LayerUiActionType type = LayerUiActionType::None;
+	int layerId = 0;
+	int destinationIndex = -1;
+};
+
 class Ui {
 public:
 	ofxFloatSlider hue;
@@ -11,7 +31,6 @@ public:
 	ofxFloatSlider eraserSize;
 	ofxFloatSlider eraserAlpha;
 	ofxToggle penSwitch;
-	ofxToggle glowSwitch;
 	ofxButton undo;
 	ofxButton redo;
 	ofxButton deleteAll;
@@ -25,4 +44,34 @@ public:
 
 	void placeUi(bool isPen);
 	float lastHue = -1.0f;
+	void drawLayerPanel(
+		const std::vector<std::unique_ptr<Layer>> & layers,
+		int selectedLayerId);
+
+	LayerUiAction pressLayerPanel(
+		int x,
+		int y,
+		const std::vector<std::unique_ptr<Layer>> & layers);
+
+	void scrollLayerPanel(float scrollY, int layerCount);
+	LayerUiAction releaseLayerPanel(
+		int x,
+		int y,
+		int layerCount);
+
+private:
+	ofRectangle layerAddRect;
+	ofRectangle layerListRect;
+
+    bool layerMenuOpen = false;
+	int firstVisibleLayer = 0;
+
+	static constexpr int visibleLayerCount = 4;
+	static constexpr float layerRowHeight = 46.0f;
+
+	ofRectangle getLayerRowRect(int visibleRow) const;
+
+	// マウスで押したレイヤー。0は押していない状態
+	int draggedLayerId = 0;
+	ofRectangle getLayerDeleteRect(int visibleRow) const;
 };
