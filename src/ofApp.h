@@ -33,11 +33,12 @@ public:
 
 	Ui ui = Ui(mainWidth);
 
-	// Windows版のUIは本質じゃないので未確認
-	// 余裕があるときに確認されたし
 	void mouseScrolled(
 		int x,
 		int y,
 		float scrollX,
 		float scrollY) override;
+#ifdef __EMSCRIPTEN__
+	void syncLayerStateToWeb();
+#endif // __EMSCRIPTEN__
 };

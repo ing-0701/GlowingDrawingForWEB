@@ -22,6 +22,9 @@ Layer::Layer(
 	settings.width = width;
 	settings.height = height;
 	settings.internalformat = GL_RGBA32F;
+#ifdef __EMSCRIPTEN__
+	settings.textureTarget = GL_TEXTURE_2D;
+#endif // __EMSCRIPTEN__
 
 	canvas.allocate(settings);
 

@@ -11,6 +11,9 @@ void GlowFilter::setup(int width, int height) {
 	settings.width = width;
 	settings.height = height;
 	settings.internalformat = GL_RGBA32F;
+#ifdef __EMSCRIPTEN__
+	settings.textureTarget = GL_TEXTURE_2D;
+#endif // __EMSCRIPTEN__
 
 	preGlowFbo.allocate(settings);
 	glowFbo1.allocate(settings);

@@ -1,5 +1,5 @@
 .drawing-app {
-    width: 1060px;
+    width: 1280px;
     text-align: left;
     font-size: 14px;
     line-height: 1.5;
@@ -294,4 +294,87 @@
     background-size: calc(100% - 16px) 100%;
     background-position: center;
     background-repeat: no-repeat;
+}
+
+.drawing-layer-panel {
+    box-sizing: border-box;
+    width: 220px;
+    flex: 0 0 220px;
+    min-height: 602px;
+    padding: 12px;
+    border: 1px solid #fff;
+    background: var(--panel-bg);
+}
+
+.drawing-layer-panel[hidden] {
+    display: none;
+}
+
+.drawing-layer-heading,
+.drawing-layer-menu {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.drawing-layer-heading {
+    justify-content: space-between;
+}
+
+.drawing-layer-menu {
+    margin-top: 8px;
+}
+
+.drawing-layer-list {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    max-height: 480px;
+    overflow-y: auto;
+}
+
+.drawing-layer-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    margin-bottom: 4px;
+    border: 1px solid #666;
+    background: #333;
+    color: #fff;
+}
+
+.drawing-layer-row.is-selected {
+    border-color: #8abfff;
+    background: #345477;
+}
+
+.drawing-app .drawing-layer-select {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+    padding: 6px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.drawing-layer-row small {
+    color: #ddd;
+}
+
+.drawing-app .drawing-layer-delete {
+    flex: 0 0 28px;
+    padding: 4px;
+}
+
+.drawing-layer-panel button:disabled {
+    opacity: 0.4;
+    cursor: default;
 }
