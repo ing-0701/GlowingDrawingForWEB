@@ -39,7 +39,7 @@ void GlowFilter::draw(ofFbo & source, float time) {
 		return;
 	}
 
-	//蜈�逕ｻ蜒上′螟牙喧縺励◆縺ｨ縺阪□縺第隼繧√※繝輔ぅ繝ｫ繧ｿ繝ｼ繧偵°縺代ｋ
+	// 元画像が変化したときだけ改めてフィルターをかける
 	if (glowNeedupdate) {
 		blurInto(source, glowFbo1, 1.5f, 1.0f);
 		blurInto(source, glowFbo2, 4.0f, glowStrength);
@@ -73,7 +73,7 @@ void GlowFilter::draw(ofFbo & source, float time) {
 
 	    glowFbo2.draw(0, 0);
 
-	// 谺｡縺ｮ謠冗判縺ｫ蜷代￠縺ｦ謌ｻ縺�
+	// 次の描画に向けて戻す
 	ofSetColor(255, 255, 255, 255);
 
 	glBlendFuncSeparate(
@@ -84,7 +84,7 @@ void GlowFilter::draw(ofFbo & source, float time) {
 void GlowFilter::blurInto(ofFbo & source, ofFbo & destination, float sigma, float strength) {
 	ofPushStyle();
 
-	// 1蝗樒岼�ｼ壼��逕ｻ蜒上ｒ讓ｪ譁ｹ蜷代↓縺ｼ縺九☆
+	// 1回目：元画像を横方向にぼかす
 	preGlowFbo.begin();
 	ofClear(0, 0, 0, 0);
 	ofDisableAlphaBlending();
@@ -101,7 +101,7 @@ void GlowFilter::blurInto(ofFbo & source, ofFbo & destination, float sigma, floa
 	glowShader.end();
 	preGlowFbo.end();
 
-	// 2蝗樒岼�ｼ壽ｨｪ譁ｹ蜷代�ｮ邨先棡繧堤ｸｦ譁ｹ蜷代↓縺ｼ縺九☆
+	// 2回目：横方向の結果を縦方向にぼかす
 	destination.begin();
 	ofClear(0, 0, 0, 0);
 	ofDisableAlphaBlending();
