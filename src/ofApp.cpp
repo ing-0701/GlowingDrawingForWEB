@@ -9,7 +9,7 @@ EM_JS(int, getBackgroundBrightness, (), {
 
 EM_JS(int, getPaintColor, (), {
 	return window['paintColor'] ?? 0;
-	})
+})
 
 EM_JS(double, getPenSize, (), {
 	return window['paintPenSize'] ?? 0.1;
@@ -37,12 +37,11 @@ EM_JS(int, getPenMode, (), {
 	return 1;
 })
 
-EM_JS(int, getGlowMode, (), {
-	return window['paintGlowMode'] === true ? 1 : 0;
-})
-
 EM_JS(int, takePaintCommand, (), {
 	const commands = window['paintCommands'];
+
+	window['paintCommandLayerId'] = 0;
+	window['paintCommandTargetLayerId'] = 0;
 
 	if (!commands || commands.length === 0) {
 		return 0;
@@ -53,8 +52,55 @@ EM_JS(int, takePaintCommand, (), {
 	if (command === 'undo') return 1;
 	if (command === 'redo') return 2;
 	if (command === 'deleteAll') return 3;
+	if (command === 'addNormal') return 4;
+	if (command === 'addGlow') return 5;
+
+	// commandがnullでなく、object型の場合
+	if (command && typeof command === 'object') {
+		// 整数か？0じゃないか？
+		if (!Number.isInteger(command.layerId) || command.layerId <= 0) {
+			return 0;
+		}
+
+		window['paintCommandLayerId'] = command.layerId;
+
+		if (command.type === 'selectLayer') return 6;
+		if (command.type === 'deleteLayer') return 7;
+
+		if (command.type === 'moveLayer') {
+			if (!Number.isInteger(command.targetLayerId)
+				|| command.targetLayerId <= 0) {
+				return 0;
+			}
+
+			window['paintCommandTargetLayerId'] = command.targetLayerId;
+
+			return 8;
+		}
+	}
 
 	return 0;
+})
+
+EM_JS(int, getPaintCommandLayerId, (), {
+	return window['paintCommandLayerId'];
+})
+
+EM_JS(int, getPaintCommandTargetLayerId, (), {
+	return window['paintCommandTargetLayerId'];
+})
+
+// UTF8としてC++からWASMを通して受け取った文字列をJSONに直してReactに渡す関数
+EM_JS(void, publishLayerState, (const char * jsonText), {
+	const text = UTF8ToString(jsonText);
+
+	// 内容が変わっていなければ、前回のデータをそのまま使う
+	if (window['paintLayerStateText'] === text) {
+		return;
+	}
+
+	window['paintLayerState'] = JSON.parse(text);
+	window['paintLayerStateText'] = text;
 })
 #endif
 
@@ -74,7 +120,7 @@ void ofApp::setup() {
 
 	const int initialLayerId = paintTool.addLayer(LayerType::Normal, false);
 
-		ofLogNotice("Layers")
+	ofLogNotice("Layers")
 		<< "Created Layer" << initialLayerId
 		<< ", count=" << paintTool.layers.size()
 		<< ", selected=" << paintTool.selectedLayerId;
@@ -96,10 +142,45 @@ void ofApp::update() {
 			paintTool.redo();
 		} else if (command == 3) {
 			beforeDeleteAll();
+		} else if (command == 4) {
+			paintTool.addLayer(LayerType::Normal);
+		} else if (command == 5) {
+			paintTool.addLayer(LayerType::Glow);
+		} else if (command == 6) {
+			const int layerId = getPaintCommandLayerId();
+
+			// Reactの表示から消える直前の行が押される場合もあるため、
+			// 現在も存在するIDか確認してから選択する
+			for (const auto& layer : paintTool.layers) {
+				if (layer->id == layerId) {
+					paintTool.selectedLayerId = layerId;
+					break;
+				}
+			}
+		} else if (command == 7) {
+			paintTool.deleteLayer(getPaintCommandLayerId());
+		} else if (command == 8) {
+			const int layerId = getPaintCommandLayerId();
+			const int targetLayerId = getPaintCommandTargetLayerId();
+
+			int destinationIndex = -1;
+
+			for (int i = 0; i < static_cast<int>(paintTool.layers.size()); ++i) {
+				if (paintTool.layers[i]->id == targetLayerId) {
+					destinationIndex = i;
+					break;
+				}
+			}
+
+			if (destinationIndex != -1) {
+				paintTool.moveLayer(layerId, destinationIndex);
+			}
 		}
 
 		command = takePaintCommand();
 	}
+
+	syncLayerStateToWeb();
 #endif // __EMSCRIPTEN__
 }
 
@@ -355,3 +436,30 @@ void ofApp::mouseScrolled(
 	}
 #endif
 }
+
+#ifdef __EMSCRIPTEN__
+// JSON形式の変数に選択中のIDとそれに対応するレイヤー情報を入れて、文字列に変換して
+// それを引数としてpublishLayerStateを呼ぶ関数
+// 要は選択中のレイヤーの情報をReactに教えるためのもの
+void ofApp::syncLayerStateToWeb() {
+	ofJson state;
+	state["selectedLayerId"] = paintTool.selectedLayerId;
+	state["layers"] = ofJson::array();
+
+	for (const auto& layer : paintTool.layers) {
+		ofJson item;
+
+		item["id"] = layer->id;
+		item["name"] = layer->name;
+		item["type"] = layer->filter->getType() == LayerType::Normal
+			? "Normal"
+			: "Glow";
+
+		state["layers"].push_back(item);
+	}
+
+	const std::string text = state.dump();
+
+	publishLayerState(text.c_str());
+}
+#endif // __EMSCRIPTEN__

@@ -4,7 +4,7 @@
 #ifdef __EMSCRIPTEN__
 	#include <emscripten.h>
 EM_JS(double, getHue, (), {
-	return window['paintHue'] ? ? 0;
+	return window['paintHue'] ?? 0;
 })
 #endif
 

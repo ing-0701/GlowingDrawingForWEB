@@ -1,9 +1,32 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ColorPicker from './ColorPicker'
 import './ofViewer.css'
 import { rangeStyle } from './rangeStyle'
 
-type PaintCommand = 'undo' | 'redo' | 'deleteAll'
+type PaintCommand =
+    | 'undo'
+    | 'redo'
+    | 'deleteAll'
+    | 'addNormal'
+    | 'addGlow'
+    | { type: 'selectLayer'; layerId: number }
+    | { type: 'deleteLayer'; layerId: number }
+    | {
+        type: 'moveLayer'
+        layerId: number
+        targetLayerId: number
+    }
+
+type PaintLayer = {
+    id: number
+    name: string
+    type: 'Normal' | 'Glow'
+}
+
+type PaintLayerState = {
+    selectedLayerId: number
+    layers: PaintLayer[]
+}
 
 type PaintWindow = Window & {
     paintBackgroundBrightness?: number
@@ -13,8 +36,8 @@ type PaintWindow = Window & {
     paintEraserSize?: number
     paintEraserAlpha?: number
     paintPenMode?: boolean
-    paintGlowMode?: boolean
     paintCommands?: PaintCommand[]
+    paintLayerState?: PaintLayerState
 }
 
 export default function OfViewer() {
@@ -25,10 +48,30 @@ export default function OfViewer() {
     const [eraserSize, setEraserSize] = useState(0.1)
     const [eraserAlpha, setEraserAlpha] = useState(1)
     const [isPen, setIsPen] = useState(true)
-    const [isGlow, setIsGlow] = useState(false)
     const [showUi, setShowUi] = useState(true)
+    const [layerState, setLayerState] = useState<PaintLayerState | null>(null)
+    const [layerMenuOpen, setLayerMenuOpen] = useState(false)
 
     const iframeRef = useRef<HTMLIFrameElement>(null)
+    const draggedLayerIdRef = useRef<number | null>(null)
+
+    useEffect(() => {
+        const timerId = window.setInterval(() => {
+            const paintWindow = iframeRef.current?.contentWindow as PaintWindow | null
+            const nextState = paintWindow?.paintLayerState
+
+            if (!nextState) {
+                setLayerState(null)
+                return
+            }
+
+            setLayerState(nextState)
+        }, 100)
+
+        return () => {
+            window.clearInterval(timerId)
+        }
+    }, [])
 
     function sendBrightness(value: number) {
         const paintWindow = iframeRef.current?.contentWindow
@@ -98,14 +141,6 @@ export default function OfViewer() {
         paintWindow.paintCommands.push(command)
     }
 
-    function sendGlowMode(value: boolean) {
-        const paintWindow = iframeRef.current?.contentWindow
-
-        if (paintWindow) {
-            (paintWindow as PaintWindow).paintGlowMode = value
-        }
-    }
-
     return (
         <section className='drawing-app'>
             <header className='drawing-header'>
@@ -131,27 +166,9 @@ export default function OfViewer() {
                     </button>
 
                     <button
-                        type="button"
-                        className='drawing-glow-button'
-                        aria-pressed={isGlow}
-                        title={
-                            isGlow
-                                ? '現在：発光キャンバス（通常に切り替える）'
-                                : '現在：通常キャンバス（発光に切り替える）'
-                        }
-                        onClick={() => {
-                            const nextIsGlow = !isGlow
-                            setIsGlow(nextIsGlow)
-                            sendGlowMode(nextIsGlow)
-                        }}
-                    >
-                        {isGlow ? 'GlowMode' : 'NormalMode'}
-                    </button>
-
-                    <button
                         type='button'
                         aria-expanded={showUi}
-                        aria-controls='drawing-sidebar'
+                        aria-controls='drawing-sidebar drawing-layer-panel'
                         title={showUi ? 'UIを非表示にする' : 'UIを表示する'}
                         onClick={() => {
                             setShowUi((current) => !current)
@@ -179,12 +196,11 @@ export default function OfViewer() {
                         sendEraserSize(eraserSize);
                         sendEraserAlpha(eraserAlpha);
                         sendPenMode(isPen);
-                        sendGlowMode(isGlow);
                     }}
                 />
 
                 <aside
-                    id='drawing-slidebar'
+                    id='drawing-sidebar'
                     className='drawing-sidebar'
                     aria-label='描画設定'
                     hidden={!showUi}
@@ -283,6 +299,142 @@ export default function OfViewer() {
                             />
                         </label>
                     </div>
+                </aside>
+                <aside
+                    id="drawing-layer-panel"
+                    className="drawing-layer-panel"
+                    aria-label="レイヤー"
+                    hidden={!showUi}
+                >
+                    <div className='drawing-layer-heading'>
+                        <strong>Layers</strong>
+
+                        <button
+                            type='button'
+                            aria-label='レイヤー追加メニュー'
+                            aria-expanded={layerMenuOpen}
+                            aria-controls='drawing-layer-menu'
+                            disabled={layerState === null}
+                            onClick={() => setLayerMenuOpen((open) => !open)}
+                        >
+                            {layerMenuOpen ? '閉じる' : '＋'}
+                        </button>
+                    </div>
+
+                    {layerMenuOpen && (
+                        <div id="drawing-layer-menu" className="drawing-layer-menu">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    sendCommand('addNormal')
+                                    setLayerMenuOpen(false)
+                                }}
+                            >
+                                Normal
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    sendCommand('addGlow')
+                                    setLayerMenuOpen(false)
+                                }}
+                            >
+                                Glow
+                            </button>
+                        </div>
+                    )}
+
+                    {layerState === null ? (
+                        <p>レイヤー情報を待っています…</p>
+                    ) : (
+                        <ul className="drawing-layer-list">
+                            {layerState.layers.map((layer) => (
+                                <li
+                                    key={layer.id}
+                                    className={
+                                        layer.id === layerState.selectedLayerId
+                                            ? 'drawing-layer-row is-selected'
+                                            : 'drawing-layer-row'
+                                    }
+                                    onDragOver={(event) => {
+                                        if(draggedLayerIdRef.current === null){
+                                            return
+                                        }
+
+                                        event.preventDefault()
+                                        event.dataTransfer.dropEffect = 'move'
+                                    }}
+                                    onDrop={(event) => {
+                                        const draggedId = draggedLayerIdRef.current
+
+                                        if(draggedId === null){
+                                            return
+                                        }
+
+                                        event.preventDefault()
+                                        draggedLayerIdRef.current = null
+
+                                        if(draggedId === layer.id){
+                                            return
+                                        }
+
+                                        sendCommand({
+                                            type: 'moveLayer',
+                                            layerId: draggedId,
+                                            targetLayerId: layer.id,
+                                        })
+                                    }}
+                                >
+                                    <button
+                                        type="button"
+                                        className="drawing-layer-select"
+                                        draggable
+                                        aria-pressed={
+                                            layer.id === layerState.selectedLayerId
+                                        }
+                                        onClick={() => sendCommand({
+                                            type: 'selectLayer',
+                                            layerId: layer.id,
+                                        })}
+                                        onDragStart={(event) => {
+                                            draggedLayerIdRef.current = layer.id
+
+                                            event.dataTransfer.effectAllowed = 'move'
+                                            event.dataTransfer.setData(
+                                                'text/plain',
+                                                String(layer.id)
+                                            )
+
+                                            sendCommand({
+                                                type: 'selectLayer',
+                                                layerId: layer.id,
+                                            })
+                                        }}
+
+                                        onDragEnd={() => {
+                                            draggedLayerIdRef.current = null
+                                        }}
+                                    >
+                                        <span>{layer.name}</span>
+                                        <small>{layer.type}Layer</small>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="drawing-layer-delete"
+                                        aria-label={`${layer.name}を削除`}
+                                        disabled={layerState.layers.length <= 1}
+                                        onClick={() => sendCommand({
+                                            type: 'deleteLayer',
+                                            layerId: layer.id,
+                                        })}
+                                    >
+                                        ×
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </aside>
             </div>
         </section>

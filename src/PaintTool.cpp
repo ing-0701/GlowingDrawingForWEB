@@ -14,6 +14,10 @@ PaintTool::PaintTool(int mainWidth, int mainHeight) {
 	s.width = mainWidth;
 	s.height = mainHeight;
 	s.internalformat = GL_RGBA32F;
+#ifdef __EMSCRIPTEN__
+	s.textureTarget = GL_TEXTURE_2D;
+#endif // __EMSCRIPTEN__
+
 
 	preFbo2D.allocate(s);
 	historySwapFbo.allocate(s);
