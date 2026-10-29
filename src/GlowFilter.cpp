@@ -1,6 +1,7 @@
 #include "GlowFilter.h"
 
 #include <cmath>
+#include <algorithm>
 
 LayerType GlowFilter::getType() const {
 	return LayerType::Glow;
@@ -41,32 +42,27 @@ void GlowFilter::draw(ofFbo & source, float time) {
 
 	// 元画像が変化したときだけ改めてフィルターをかける
 	if (glowNeedupdate) {
-		blurInto(source, glowFbo1, 1.5f, 1.0f);
-		blurInto(source, glowFbo2, 4.0f, glowStrength);
+		blurInto(source, glowFbo1, glowSigma, 1.0f);
+		blurInto(source, glowFbo2, glowSigma * (8.0f / 3.0f), glowStrength);
 
 		glowNeedupdate = false;
 	}
+
+	const float phase = TWO_PI * time / glowPeriod;
+	const float amount = (1.0f - std::cos(phase)) * 0.5f;
+	const float minBrightness = 0.25f;
+	const float maxBrightness = 1.0f;
+	const float brightness = minBrightness + (maxBrightness - minBrightness) * amount;
 
 	ofEnableAlphaBlending();
 	ofSetColor(255, 255, 255, 255);
 
 	glBlendEquation(GL_FUNC_ADD);
 	glBlendFuncSeparate(
-		GL_ONE, GL_ONE_MINUS_SRC_ALPHA,
-		GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-
-	glowFbo1.draw(0, 0);
-
-	const float period = 1.0f;
-	const float phase = TWO_PI * time / period;
-	const float amount = (1.0f - std::cos(phase)) * 0.5f;
-	const float minBrightness = 0.25f;
-	const float maxBrightness = 1.0f;
-	const float brightness = minBrightness + (maxBrightness - minBrightness) * amount;
-
-	glBlendFuncSeparate(
 		GL_ONE, GL_ONE,
 		GL_ZERO, GL_ONE);
+
+	glowFbo1.draw(0, 0);
 
 	ofSetColor(ofFloatColor(
 		brightness, brightness, brightness, 1.0f));
@@ -79,6 +75,35 @@ void GlowFilter::draw(ofFbo & source, float time) {
 	glBlendFuncSeparate(
 		GL_ONE, GL_ONE_MINUS_SRC_ALPHA,
 		GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+float GlowFilter::getSigma() const {
+	return glowSigma;
+}
+
+float GlowFilter::getStrength() const{
+	return glowStrength;
+}
+
+float GlowFilter::getPeriod() const {
+	return glowPeriod;
+}
+
+void GlowFilter::setParameters(float sigma, float strength, float period) {
+	sigma = std::clamp(sigma, 1.0f, 3.0f);
+	strength = std::clamp(strength, 1.0f, 3.0f);
+	period = std::clamp(period, 0.3f, 3.0f);
+
+	// ぼかし画像の作り直しが必要か調べる
+	const bool needsBlurUpdate = glowSigma != sigma || glowStrength != strength;
+
+	glowSigma = sigma;
+	glowStrength = strength;
+	glowPeriod = period;
+
+	if (needsBlurUpdate) {
+		markDirty();
+	}
 }
 
 void GlowFilter::blurInto(ofFbo & source, ofFbo & destination, float sigma, float strength) {

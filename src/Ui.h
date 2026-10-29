@@ -59,6 +59,16 @@ public:
 		int y,
 		int layerCount);
 
+#ifdef __EMSCRIPTEN__
+#else
+	ofxFloatSlider glowSigma;
+	ofxFloatSlider glowStrength;
+	ofxFloatSlider glowPeriod;
+
+	bool glowControlsEnabled = false;
+#endif // __EMSCRIPTEN__
+
+
 private:
 	ofRectangle layerAddRect;
 	ofRectangle layerListRect;

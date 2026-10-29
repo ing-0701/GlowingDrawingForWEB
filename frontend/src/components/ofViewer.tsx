@@ -3,6 +3,12 @@ import ColorPicker from './ColorPicker'
 import './ofViewer.css'
 import { rangeStyle } from './rangeStyle'
 
+type GlowParameters = {
+    sigma: number
+    strength: number
+    period: number
+}
+
 type PaintCommand =
     | 'undo'
     | 'redo'
@@ -16,11 +22,18 @@ type PaintCommand =
         layerId: number
         targetLayerId: number
     }
+    | {
+        type: 'setGlowParameter'
+        layerId: number
+        parameter: keyof GlowParameters
+        value: number
+    }
 
 type PaintLayer = {
     id: number
     name: string
     type: 'Normal' | 'Glow'
+    glow: GlowParameters | null
 }
 
 type PaintLayerState = {
@@ -58,6 +71,12 @@ export default function OfViewer() {
     useEffect(() => {
         const timerId = window.setInterval(() => {
             const paintWindow = iframeRef.current?.contentWindow as PaintWindow | null
+            
+            // 命令の処理待ちなら、変更前の状態でUIを上書きしない
+            if((paintWindow?.paintCommands?.length ?? 0) > 0){
+                return
+            }
+            
             const nextState = paintWindow?.paintLayerState
 
             if (!nextState) {
@@ -141,6 +160,47 @@ export default function OfViewer() {
         paintWindow.paintCommands.push(command)
     }
 
+    function sendGlowParameter(
+        layerId: number,
+        parameter: keyof GlowParameters,
+        value: number,
+    ){
+        sendCommand({
+            type: 'setGlowParameter',
+            layerId,
+            parameter,
+            value,
+        })
+
+        // C++からの返答を待つ間も、つまみをすぐに動かす
+        setLayerState((previous) => {
+            if(!previous) return previous
+            
+            return {
+                ...previous,
+                layers: previous.layers.map((layer) =>{
+                    if(layer.id !== layerId || !layer.glow){
+                        return layer
+                    }
+
+                    return{
+                        ...layer,
+                        glow: {
+                            ...layer.glow, 
+                            [parameter]: value,
+                        }
+                    }
+                }),
+            }
+        })
+    }
+
+    const selectedLayer = layerState?.layers.find(
+        (layer) => layer.id === layerState.selectedLayerId
+    )
+
+    const selectedGlow = selectedLayer?.glow
+
     return (
         <section className='drawing-app'>
             <header className='drawing-header'>
@@ -221,11 +281,11 @@ export default function OfViewer() {
 
                             <input
                                 type="range"
-                                min={0}
+                                min={0.05}
                                 max={1}
                                 step={0.01}
                                 value={isPen ? penSize : eraserSize}
-                                style={rangeStyle(isPen ? penSize : eraserSize)}
+                                style={rangeStyle(isPen ? penSize : eraserSize, 0.05, 1)}
                                 onChange={(event) => {
                                     const value = event.currentTarget.valueAsNumber
                                     if (isPen) {
@@ -246,11 +306,11 @@ export default function OfViewer() {
                             </span>
                             <input
                                 type="range"
-                                min={0}
+                                min={0.01}
                                 max={1}
                                 step={0.01}
                                 value={isPen ? penAlpha : eraserAlpha}
-                                style={rangeStyle(isPen ? penAlpha : eraserAlpha)}
+                                style={rangeStyle(isPen ? penAlpha : eraserAlpha, 0.01, 1)}
                                 onChange={(event) => {
                                     const value = event.currentTarget.valueAsNumber
 
@@ -434,6 +494,66 @@ export default function OfViewer() {
                                 </li>
                             ))}
                         </ul>
+                    )}
+
+                    {selectedLayer && selectedGlow ? (
+                        <div className='drawing-glow-controls'>
+                            <strong>{selectedLayer.name}の発光設定</strong>
+
+                            {([
+                                {
+                                    key: 'sigma',
+                                    label: 'sigma',
+                                    min: 1.0,
+                                    max: 3.0,
+                                },
+                                {
+                                    key: 'strength',
+                                    label: 'strength',
+                                    min: 1.0,
+                                    max: 3.0,
+                                },
+                                {
+                                    key: 'period',
+                                    label: 'period(秒)',
+                                    min: 0.3,
+                                    max: 3.0,
+                                },
+                            ] as const).map((setting) => (
+                                <label
+                                key={setting.key}
+                                className='drawing-field'
+                                >
+                                    <span>
+                                        {setting.label}:
+                                        {selectedGlow[setting.key].toFixed(2)}
+                                    </span>
+
+                                    <input
+                                    type='range'
+                                    min={setting.min}
+                                    max={setting.max}
+                                    step={0.01}
+                                    value={selectedGlow[setting.key]}
+                                    style={rangeStyle(
+                                        selectedGlow[setting.key],
+                                        setting.min,
+                                        setting.max
+                                    )}
+                                    onChange={(event) => {
+                                        sendGlowParameter(
+                                            selectedLayer.id,
+                                            setting.key,
+                                            event.currentTarget.valueAsNumber,
+                                        )
+                                    }}
+                                    />
+                                </label>
+                            ))}
+                        </div>
+                    ) : (
+                            <p>Glowレイヤーを選択すると発光を調整できます。</p>
+
                     )}
                 </aside>
             </div>

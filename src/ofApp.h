@@ -40,5 +40,11 @@ public:
 		float scrollY) override;
 #ifdef __EMSCRIPTEN__
 	void syncLayerStateToWeb();
+#else
+	void syncGlowControls();
+	void onGlowParameterChanged(float & value);
+
+	bool syncingGlowControls = false;
+	int glowControlsLayerId = 0;
 #endif // __EMSCRIPTEN__
 };
