@@ -42,6 +42,7 @@ EM_JS(int, takePaintCommand, (), {
 
 	window['paintCommandLayerId'] = 0;
 	window['paintCommandTargetLayerId'] = 0;
+	window['paintCommandValue'] = 0;
 
 	if (!commands || commands.length === 0) {
 		return 0;
@@ -64,6 +65,21 @@ EM_JS(int, takePaintCommand, (), {
 
 		window['paintCommandLayerId'] = command.layerId;
 
+		if (command.type === 'setGlowParameter') {
+			// 値が有限か判定
+			if (!Number.isFinite(command.value)) {
+				return 0;
+			}
+
+			window['paintCommandValue'] = command.value;
+
+			if (command.parameter === 'sigma') return 9;
+			if (command.parameter === 'strength') return 10;
+			if (command.parameter === 'period') return 11;
+
+			return 0;
+		}
+
 		if (command.type === 'selectLayer') return 6;
 		if (command.type === 'deleteLayer') return 7;
 
@@ -81,6 +97,10 @@ EM_JS(int, takePaintCommand, (), {
 
 	return 0;
 })
+
+EM_JS(double, getPaintCommandValue, (), {
+	return window['paintCommandValue'];
+	})
 
 EM_JS(int, getPaintCommandLayerId, (), {
 	return window['paintCommandLayerId'];
@@ -124,6 +144,14 @@ void ofApp::setup() {
 		<< "Created Layer" << initialLayerId
 		<< ", count=" << paintTool.layers.size()
 		<< ", selected=" << paintTool.selectedLayerId;
+
+#ifndef __EMSCRIPTEN__
+	ui.glowSigma.addListener(this, &ofApp::onGlowParameterChanged);
+	ui.glowStrength.addListener(this, &ofApp::onGlowParameterChanged);
+	ui.glowPeriod.addListener(this, &ofApp::onGlowParameterChanged);
+
+	syncGlowControls();
+#endif // !__EMSCRIPTEN__
 }
 
 //--------------------------------------------------------------
@@ -175,12 +203,44 @@ void ofApp::update() {
 			if (destinationIndex != -1) {
 				paintTool.moveLayer(layerId, destinationIndex);
 			}
+		} else if (command >= 9 && command <= 11) {
+			const int layerId = getPaintCommandLayerId();
+			const float value = static_cast<float>(getPaintCommandValue());
+
+			for (auto& layer : paintTool.layers) {
+				if (layer->id != layerId) {
+					continue;
+				}
+
+				if (layer->filter->getType() != LayerType::Glow) {
+					break;
+				}
+
+				auto * glow = static_cast<GlowFilter *>(layer->filter.get());
+
+				float sigma = glow->getSigma();
+				float strength = glow->getStrength();
+				float period = glow->getPeriod();
+
+				if (command == 9) {
+					sigma = value;
+				} else if (command == 10){
+					strength = value;
+				} else {
+					period = value;
+				}
+
+				glow->setParameters(sigma, strength, period);
+				break;
+			}
 		}
 
 		command = takePaintCommand();
 	}
 
 	syncLayerStateToWeb();
+#else
+	syncGlowControls();
 #endif // __EMSCRIPTEN__
 }
 
@@ -214,7 +274,7 @@ void ofApp::draw() {
 	}
 
 	ofSetColor(100);
-	ofDrawRectangle(800, 256, 256, 344);
+	ofDrawRectangle(mainWidth, 256, 256, ofGetHeight() - 256);
 
 	ui.placeUi(isPen);
 	ui.updatePicker(mainWidth);
@@ -404,6 +464,14 @@ void ofApp::exit() {
 	ui.undo.removeListener(&paintTool, &PaintTool::undo);
 	ui.redo.removeListener(&paintTool, &PaintTool::redo);
 	ui.deleteAll.removeListener(this, &ofApp::beforeDeleteAll);
+#ifndef __EMSCRIPTEN__
+	ui.glowSigma.removeListener(
+		this, &ofApp::onGlowParameterChanged);
+	ui.glowStrength.removeListener(
+		this, &ofApp::onGlowParameterChanged);
+	ui.glowPeriod.removeListener(
+		this, &ofApp::onGlowParameterChanged);
+#endif
 }
 
 //--------------------------------------------------------------
@@ -455,11 +523,83 @@ void ofApp::syncLayerStateToWeb() {
 			? "Normal"
 			: "Glow";
 
+		item["glow"] = nullptr;
+
+		if (layer->filter->getType() == LayerType::Glow) {
+			const auto * glow = static_cast<const GlowFilter *>(layer->filter.get());
+
+			item["glow"] = {
+				{ "sigma", glow->getSigma() },
+				{ "strength", glow->getStrength() },
+				{ "period", glow->getPeriod() }
+			};
+		}
+
 		state["layers"].push_back(item);
 	}
 
 	const std::string text = state.dump();
 
 	publishLayerState(text.c_str());
+}
+#else
+void ofApp::syncGlowControls() {
+	GlowFilter * glow = paintTool.getSelectedGlowFilter();
+	const bool enabled = glow != nullptr;
+
+	// 選択中のレイヤーのモードを判定
+	// GlowModeなのにスライダーが使えない状態だったなら使えるように
+	// NormalModeなのに使える状態だったなら使えないようにする
+	if (enabled != ui.glowControlsEnabled) {
+		if (enabled) {
+			ui.glowSigma.registerMouseEvents();
+			ui.glowStrength.registerMouseEvents();
+			ui.glowPeriod.registerMouseEvents();
+
+		} else {
+			ui.glowSigma.unregisterMouseEvents();
+			ui.glowStrength.unregisterMouseEvents();
+			ui.glowPeriod.unregisterMouseEvents();
+		}
+	}
+
+	ui.glowControlsEnabled = enabled;
+
+	if (!glow) {
+		glowControlsLayerId = 0;
+		return;
+	}
+
+	// 以下はユーザー操作ではなく、保存済みの値の表示
+	syncingGlowControls = true;
+
+	ui.glowSigma = glow->getSigma();
+	ui.glowStrength = glow->getStrength();
+	ui.glowPeriod = glow->getPeriod();
+
+	glowControlsLayerId = paintTool.selectedLayerId;
+
+	syncingGlowControls = false;
+}
+
+void ofApp::onGlowParameterChanged(float&) {
+	if (syncingGlowControls || drawingFlag) {
+		return;
+	}
+
+	if (glowControlsLayerId != paintTool.selectedLayerId) {
+		return;
+	}
+
+	GlowFilter * glow = paintTool.getSelectedGlowFilter();
+
+	if (!glow) {
+		return;
+	}
+
+	glow->setParameters(
+		ui.glowSigma,
+		ui.glowStrength,
+		ui.glowPeriod);
 }
 #endif // __EMSCRIPTEN__

@@ -16,19 +16,19 @@ Ui::Ui(int mainWidth) {
 	hue.setup("Hue", 0.0, 0.0, 1.0);
 	hue.setSize(256, 30);
 	hue.setPosition(mainWidth, 258 + 32 * 0);
-	penSize.setup("penSize", 0.1, 0.1, 1.0);
+	penSize.setup("penSize", 0.1, 0.05, 1.0);
 	penSize.setSize(256, 30);
 	penSize.setPosition(mainWidth, 258 + 32 * 1);
 	penSwitch.setup("pen/eraser", true);
 	penSwitch.setSize(100, 30);
 	penSwitch.setPosition(mainWidth, 258 + 32 * 4);
-	penAlpha.setup("penAlpha", 1.0, 0.0, 1.0);
+	penAlpha.setup("penAlpha", 1.0, 0.01, 1.0);
 	penAlpha.setSize(256, 30);
 	penAlpha.setPosition(mainWidth, 258 + 32 * 2);
-	eraserSize.setup("eraserSize", 0.1, 0.1, 1.0);
+	eraserSize.setup("eraserSize", 0.1, 0.05, 1.0);
 	eraserSize.setSize(256, 30);
 	eraserSize.setPosition(mainWidth, 258 + 32 * 1);
-	eraserAlpha.setup("eraserAlpha", 1.0, 0.0, 1.0);
+	eraserAlpha.setup("eraserAlpha", 1.0, 0.01, 1.0);
 	eraserAlpha.setSize(256, 30);
 	eraserAlpha.setPosition(mainWidth, 258 + 32 * 2);
 	undo.setup("undo");
@@ -40,6 +40,20 @@ Ui::Ui(int mainWidth) {
 	deleteAll.setup("delete");
 	deleteAll.setSize(100, 30);
 	deleteAll.setPosition(mainWidth, 258 + 32 * 7);
+	glowSigma.setup("sigma", 1.5f, 1.0f, 3.0f);
+	glowSigma.setSize(256, 30);
+	glowSigma.setPosition(mainWidth, 606);
+	glowStrength.setup("glowStrength", 2.0f, 1.0f, 3.0f);
+	glowStrength.setSize(256, 30);
+	glowStrength.setPosition(mainWidth, 638);
+	glowPeriod.setup("period", 1.0f, 0.3f, 3.0f);
+	glowPeriod.setSize(256, 30);
+	glowPeriod.setPosition(mainWidth, 670);
+
+	// 起動時はNormalレイヤーなので、操作を受け付けない
+	glowSigma.unregisterMouseEvents();
+	glowStrength.unregisterMouseEvents();
+	glowPeriod.unregisterMouseEvents();
 #endif // !__EMSCRIPTEN__
 
 	pickerPix.allocate(256, 256, OF_PIXELS_RGBA);
@@ -126,6 +140,11 @@ void Ui::placeUi(bool isPen) {
 	undo.draw();
 	redo.draw();
 	deleteAll.draw();
+	if (glowControlsEnabled) {
+		glowSigma.draw();
+		glowStrength.draw();
+		glowPeriod.draw();
+	}
 #endif // __EMSCRIPTEN__
 }
 

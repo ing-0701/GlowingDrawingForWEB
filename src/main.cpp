@@ -14,7 +14,7 @@ int main( ){
 #ifdef __EMSCRIPTEN__
 	settings.setSize(800, 600);
 #else
-	settings.setSize(800 + 256, 600);
+	settings.setSize(800 + 256, 704);
 #endif // __EMSCRIPTEN__
 
 	settings.windowMode = OF_WINDOW; //can also be OF_FULLSCREEN

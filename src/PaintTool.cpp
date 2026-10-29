@@ -450,3 +450,19 @@ void PaintTool::clearHistory() {
 	undoCount = 0;
 	redoCount = 0;
 }
+
+GlowFilter* PaintTool::getSelectedGlowFilter() {
+	for (auto& layer : layers) {
+		if (layer->id != selectedLayerId) {
+			continue;
+		}
+
+		if (layer->filter->getType() != LayerType::Glow) {
+			return nullptr;
+		}
+
+		return static_cast<GlowFilter *>(layer->filter.get());
+	}
+
+	return nullptr;
+}

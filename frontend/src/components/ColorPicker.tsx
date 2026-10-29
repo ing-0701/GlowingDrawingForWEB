@@ -87,8 +87,8 @@ export default function ColorPicker({ onChange }: Props) {
     }
 
     //カラーコードの文字列を生成
-    const colorHex =
-        `#${toRgbNumber(hsv).toString(16).padStart(6, '0')}`
+    // const colorHex =
+    //     `#${toRgbNumber(hsv).toString(16).padStart(6, '0')}`
 
     return (
         <div style={{ width: 256, flexShrink: 0, textAlign: 'left' }}>

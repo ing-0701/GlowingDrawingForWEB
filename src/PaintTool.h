@@ -85,4 +85,6 @@ public:
 	HistoryEntry & prepareHistory();
 	void finishHistory();
 	void clearHistory();
+
+	GlowFilter * getSelectedGlowFilter();
 };
