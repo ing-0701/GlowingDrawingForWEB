@@ -6,6 +6,7 @@ import type { PointerEvent } from 'react'
 //親側にある色設定の関数をこちらからコールバック関数として使うことができる
 type Props = {
     onChange: (color: number) => void
+    initialHsv?: Hsv
 }
 
 type Hsv = {
@@ -61,13 +62,15 @@ function toRgbNumber({ hue, saturation, value }: Hsv) {
     return (red << 16) | (green << 8) | blue
 }
 
-export default function ColorPicker({ onChange }: Props) {
-    // 初期色は、現在のoFと同じ黒
-    const [hsv, setHsv] = useState<Hsv>({
+export default function ColorPicker({
+        onChange,
+    initialHsv = {
         hue: 0,
         saturation: 0,
         value: 0,
-    })
+    },
+}: Props) {
+    const [hsv, setHsv] = useState<Hsv>(initialHsv)
 
     function updateColor(next: Hsv) {
         setHsv(next)

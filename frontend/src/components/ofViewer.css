@@ -1,5 +1,6 @@
 .drawing-app {
-    width: 1280px;
+    width: max-content;
+    margin: 0 auto;
     text-align: left;
     font-size: 14px;
     line-height: 1.5;
@@ -47,6 +48,8 @@
     align-items: center;
     gap: 8px;
     margin-left: auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 /* 左にキャンバス、右にUI */
@@ -248,11 +251,6 @@
     outline-offset: 3px;
 }
 
-/* UIが非表示のとき、iframeを本文領域の中央へ配置する */
-.drawing-body--ui-hidden {
-    justify-content: center;
-}
-
 /* 既存のdisplay: flexより優先して右側UIを隠す */
 .drawing-sidebar[hidden] {
     display: none;
@@ -260,8 +258,10 @@
 
 /* 発光モードがオンのときのボタン */
 .drawing-app .drawing-glow-button[aria-pressed='true'] {
-    background: #eee; /* オンの背景：明るい灰色 */
-    color: #222; /* 明るい背景でも読みやすい暗い文字 */
+    background: #eee;
+    /* オンの背景：明るい灰色 */
+    color: #222;
+    /* 明るい背景でも読みやすい暗い文字 */
     text-shadow: none;
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
     /* オンのボタン周囲の光：不透明度40%の白 */
@@ -269,7 +269,8 @@
 
 /* オンの状態でマウスを重ねたとき */
 .drawing-app .drawing-glow-button[aria-pressed='true']:hover {
-    background: #fff; /* ホバー時の背景：白 */
+    background: #fff;
+    /* ホバー時の背景：白 */
     box-shadow: 0 0 12px rgba(255, 255, 255, 0.55);
     /* ホバー時の光：不透明度55%の白 */
 }
@@ -279,16 +280,22 @@
     /* グラデーション外側の左右8pxも、両端と同じ赤にする */
     background-color: #f00;
 
-    background-image: linear-gradient(
-        to right,
-        #f00 0%,          /* 赤：色相0° */
-        #ff0 16.666667%,  /* 黄：色相60° */
-        #0f0 33.333333%,  /* 緑：色相120° */
-        #0ff 50%,         /* シアン：色相180° */
-        #00f 66.666667%,  /* 青：色相240° */
-        #f0f 83.333333%,  /* マゼンタ：色相300° */
-        #f00 100%        /* 赤：色相360° */
-    );
+    background-image: linear-gradient(to right,
+            #f00 0%,
+            /* 赤：色相0° */
+            #ff0 16.666667%,
+            /* 黄：色相60° */
+            #0f0 33.333333%,
+            /* 緑：色相120° */
+            #0ff 50%,
+            /* シアン：色相180° */
+            #00f 66.666667%,
+            /* 青：色相240° */
+            #f0f 83.333333%,
+            /* マゼンタ：色相300° */
+            #f00 100%
+            /* 赤：色相360° */
+        );
 
     /* つまみ幅16pxを考慮し、色とつまみの中心位置を合わせる */
     background-size: calc(100% - 16px) 100%;
@@ -386,4 +393,92 @@
     margin-top: 16px;
     padding-top: 12px;
     border-top: 1px solid #666;
+}
+
+/* Line内のボタンとスライダーを縦に並べる */
+#drawing-color-panel > strong {
+    display: block;
+    padding: 12px;
+}
+
+.drawing-line-panel > strong {
+    padding-top: 12px;
+}
+
+.drawing-line-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* display: flexより優先して閉じる */
+.drawing-line-panel[hidden] {
+    display: none;
+}
+
+/* キャンバス右側の常設操作パネル */
+.drawing-button-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    width: 100px;
+    flex: 0 0 100px;
+    min-height: 602px;
+    padding: 12px 8px;
+
+    border: 1px solid #fff;
+    background: var(--panel-bg);
+}
+
+.drawing-button-panel button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+/* 保存結果を表示するパネル */
+.drawing-qr-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    width: 240px;
+    flex: 0 0 240px;
+    min-height: 602px;
+    padding: 12px;
+
+    border: 1px solid #fff;
+    background: var(--panel-bg);
+}
+
+/* display: flexより優先して非表示にする */
+.drawing-qr-panel[hidden] {
+    display: none;
+}
+
+.drawing-background-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    box-sizing: content-box;
+    width: 256px;
+    flex: 0 0 256px;
+    min-height: 600px;
+    padding: 0;
+
+    border: 1px solid #fff;
+    background: var(--panel-bg);
+}
+
+.drawing-background-panel > strong {
+    padding: 12px 12px 0;
+}
+
+.drawing-background-panel[hidden] {
+    display: none;
+}
+
+.drawing-controls[hidden] {
+    display: none;
 }

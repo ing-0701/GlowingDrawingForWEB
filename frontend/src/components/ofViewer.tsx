@@ -43,7 +43,7 @@ type PaintLayerState = {
 }
 
 type PaintWindow = Window & {
-    paintBackgroundBrightness?: number
+    paintBackgroundColor?: number
     paintColor?: number
     paintPenSize?: number
     paintPenAlpha?: number
@@ -55,16 +55,20 @@ type PaintWindow = Window & {
 }
 
 export default function OfViewer() {
-    const [brightness, setBrightness] = useState(255)
+    const [backgroundColor, setBackgroundColor] = useState(0xffffff)
+    const [backgroundPanelOpen, setBackgroundPanelOpen] = useState(false)
     const [color, setColor] = useState(0)
     const [penSize, setPenSize] = useState(0.1)
     const [penAlpha, setPenAlpha] = useState(1)
     const [eraserSize, setEraserSize] = useState(0.1)
     const [eraserAlpha, setEraserAlpha] = useState(1)
     const [isPen, setIsPen] = useState(true)
-    const [showUi, setShowUi] = useState(true)
+    const [colorPanelOpen, setColorPanelOpen] = useState(false)
+    const [linePanelOpen, setLinePanelOpen] = useState(false)
+    const [layerPanelOpen, setLayerPanelOpen] = useState(false)
     const [layerState, setLayerState] = useState<PaintLayerState | null>(null)
     const [layerMenuOpen, setLayerMenuOpen] = useState(false)
+    const [qrPanelOpen, setQrPanelOpen] = useState(false)
 
     const iframeRef = useRef<HTMLIFrameElement>(null)
     const draggedLayerIdRef = useRef<number | null>(null)
@@ -107,11 +111,11 @@ export default function OfViewer() {
         }
     }, [videoUrl])
 
-    function sendBrightness(value: number) {
+    function sendBackgroundColor(value: number) {
         const paintWindow = iframeRef.current?.contentWindow
 
         if (paintWindow) {
-            (paintWindow as PaintWindow).paintBackgroundBrightness = value
+            (paintWindow as PaintWindow).paintBackgroundColor = value
         }
     }
 
@@ -352,6 +356,77 @@ export default function OfViewer() {
 
                 <div className='drawing-header-actions'>
                     <button
+                        type='button'
+                        aria-expanded={colorPanelOpen}
+                        aria-controls='drawing-color-panel'
+                        onClick={() => setColorPanelOpen((open) => !open)}
+                    >
+                        Color
+                    </button>
+
+                    <button
+                        type='button'
+                        aria-expanded={linePanelOpen}
+                        aria-controls='drawing-line-panel'
+                        onClick={() => setLinePanelOpen((open) => !open)}
+                    >
+                        Line
+                    </button>
+
+                    <button
+                        type="button"
+                        aria-expanded={backgroundPanelOpen}
+                        aria-controls="drawing-background-panel"
+                        onClick={() => setBackgroundPanelOpen((open) => !open)}
+                    >
+                        Background
+                    </button>
+
+                    <button
+                        type="button"
+                        aria-expanded={layerPanelOpen}
+                        aria-controls="drawing-layer-panel"
+                        onClick={() => setLayerPanelOpen((open) => !open)}
+                    >
+                        Layer
+                    </button>
+
+                    <button
+                        type='button'
+                        aria-expanded={qrPanelOpen}
+                        aria-controls='drawing-qr-panel'
+                        onClick={() => setQrPanelOpen((open) => !open)}
+                    >
+                        QRcode
+                    </button>
+                </div>
+            </header>
+
+            <div className='drawing-body'>
+                <iframe
+                    className='drawing-frame'
+                    ref={iframeRef}
+                    title="openFrameworksのペイント画面"
+                    src="/engine/index.html"
+                    width={800}
+                    height={600}
+                    allowFullScreen
+                    onLoad={() => {
+                        sendBackgroundColor(backgroundColor);
+                        sendColor(color);
+                        sendPenSize(penSize);
+                        sendPenAlpha(penAlpha);
+                        sendEraserSize(eraserSize);
+                        sendEraserAlpha(eraserAlpha);
+                        sendPenMode(isPen);
+                    }}
+                />
+
+                <aside
+                    className='drawing-button-panel'
+                    aria-label='描画操作'
+                >
+                    <button
                         type="button"
                         title={
                             isPen
@@ -369,193 +444,151 @@ export default function OfViewer() {
 
                     <button
                         type='button'
-                        aria-expanded={showUi}
-                        aria-controls='drawing-sidebar drawing-layer-panel'
-                        title={showUi ? 'UIを非表示にする' : 'UIを表示する'}
-                        onClick={() => {
-                            setShowUi((current) => !current)
-                        }}
+                        onClick={() => sendCommand('undo')}
                     >
-                        UI
+                        Undo
                     </button>
-                </div>
-            </header>
 
-            <div className={showUi ? 'drawing-body' : 'drawing-body drawing-body--ui-hidden'}>
-                <iframe
-                    className='drawing-frame'
-                    ref={iframeRef}
-                    title="openFrameworksのペイント画面"
-                    src="/engine/index.html"
-                    width={800}
-                    height={600}
-                    allowFullScreen
-                    onLoad={() => {
-                        sendBrightness(brightness);
-                        sendColor(color);
-                        sendPenSize(penSize);
-                        sendPenAlpha(penAlpha);
-                        sendEraserSize(eraserSize);
-                        sendEraserAlpha(eraserAlpha);
-                        sendPenMode(isPen);
-                    }}
-                />
+                    <button
+                        type='button'
+                        onClick={() => sendCommand('redo')}
+                    >
+                        Redo
+                    </button>
+
+                    <button
+                        type='button'
+                        onClick={() => sendCommand('deleteAll')}
+                    >
+                        Delete
+                    </button>
+
+                    <button
+                        type='button'
+                        onClick={() => void saveVideo()}
+                        disabled={isRecording || !layerState}
+                    >
+                        {isUploading
+                            ? '送信中…'
+                            : isRecording
+                                ? '録画中…'
+                                : 'Save'}
+                    </button>
+                </aside>
 
                 <aside
                     id='drawing-sidebar'
                     className='drawing-sidebar'
                     aria-label='描画設定'
-                    hidden={!showUi}
+                    hidden={!colorPanelOpen && !linePanelOpen}
+
                 >
-                    <ColorPicker
-                        onChange={(nextColor) => {
-                            setColor(nextColor)
-                            sendColor(nextColor)
-                        }}
-                    />
+                    <div
+                        id='drawing-color-panel'
+                        hidden={!colorPanelOpen}
+                    >
+                        <strong>Color</strong>
+                        <ColorPicker
+                            onChange={(nextColor) => {
+                                setColor(nextColor)
+                                sendColor(nextColor)
+                            }}
+                        />
+                    </div>
 
-                    <div className='drawing-controls'>
-                        <label className='drawing-field'>
-                            <span>
-                                Size
-                                :{isPen ? penSize : eraserSize}
-                            </span>
+                    <div
+                        className='drawing-controls'
+                        hidden={!linePanelOpen}
+                    >
+                        <div
+                            id="drawing-line-panel"
+                            className="drawing-line-panel"
+                            hidden={!linePanelOpen}
+                        >
+                            <strong>Line</strong>
+                            <label className='drawing-field'>
+                                <span>
+                                    Size
+                                    :{isPen ? penSize : eraserSize}
+                                </span>
 
-                            <input
-                                type="range"
-                                min={0.05}
-                                max={1}
-                                step={0.01}
-                                value={isPen ? penSize : eraserSize}
-                                style={rangeStyle(isPen ? penSize : eraserSize, 0.05, 1)}
-                                onChange={(event) => {
-                                    const value = event.currentTarget.valueAsNumber
-                                    if (isPen) {
-                                        setPenSize(value)
-                                        sendPenSize(value)
-                                    } else {
-                                        setEraserSize(value)
-                                        sendEraserSize(value)
-                                    }
-                                }}
-                            />
-                        </label>
+                                <input
+                                    type="range"
+                                    min={0.05}
+                                    max={1}
+                                    step={0.01}
+                                    value={isPen ? penSize : eraserSize}
+                                    style={rangeStyle(isPen ? penSize : eraserSize, 0.05, 1)}
+                                    onChange={(event) => {
+                                        const value = event.currentTarget.valueAsNumber
+                                        if (isPen) {
+                                            setPenSize(value)
+                                            sendPenSize(value)
+                                        } else {
+                                            setEraserSize(value)
+                                            sendEraserSize(value)
+                                        }
+                                    }}
+                                />
+                            </label>
 
-                        <label className='drawing-field'>
-                            <span>
-                                Alpha
-                                :{isPen ? penAlpha : eraserAlpha}
-                            </span>
-                            <input
-                                type="range"
-                                min={0.01}
-                                max={1}
-                                step={0.01}
-                                value={isPen ? penAlpha : eraserAlpha}
-                                style={rangeStyle(isPen ? penAlpha : eraserAlpha, 0.01, 1)}
-                                onChange={(event) => {
-                                    const value = event.currentTarget.valueAsNumber
+                            <label className='drawing-field'>
+                                <span>
+                                    Alpha
+                                    :{isPen ? penAlpha : eraserAlpha}
+                                </span>
+                                <input
+                                    type="range"
+                                    min={0.01}
+                                    max={1}
+                                    step={0.01}
+                                    value={isPen ? penAlpha : eraserAlpha}
+                                    style={rangeStyle(isPen ? penAlpha : eraserAlpha, 0.01, 1)}
+                                    onChange={(event) => {
+                                        const value = event.currentTarget.valueAsNumber
 
-                                    if (isPen) {
-                                        setPenAlpha(value)
-                                        sendPenAlpha(value)
-                                    } else {
-                                        setEraserAlpha(value)
-                                        sendEraserAlpha(value)
-                                    }
-                                }}
-                            />
-                        </label>
-
-                        <div className='drawing-history'>
-                            <button type="button" onClick={() => sendCommand('undo')}>
-                                UNDO
-                            </button>
-
-                            <button type="button" onClick={() => sendCommand('redo')}>
-                                REDO
-                            </button>
+                                        if (isPen) {
+                                            setPenAlpha(value)
+                                            sendPenAlpha(value)
+                                        } else {
+                                            setEraserAlpha(value)
+                                            sendEraserAlpha(value)
+                                        }
+                                    }}
+                                />
+                            </label>
                         </div>
 
-                        <button type="button" onClick={() => sendCommand('deleteAll')}>
-                            DELETE ALL
-                        </button>
-
-                        <button
-                            type='button'
-                            onClick={() => void saveVideo()}
-                            disabled={isRecording || !layerState}
-                        >
-                            {isUploading
-                                ? '送信中…'
-                                : isRecording
-                                    ? '録画中…'
-                                    : 'save'}
-                        </button>
-
-                        {recordingError && (
-                            <p role='alert'>{recordingError}</p>
-                        )}
-
-                        {videoUrl && (
-                            <a href={videoUrl} download="painting.webm">
-                                この端末に動画を保存
-                            </a>
-                        )}
-
-                        {downloadUrl && (
-                            <div>
-                                <p>
-                                    保存が完了しました。
-                                    スマホでQRコードを読み取ってください。
-                                </p>
-
-                                <QRCodeSVG
-                                    value={downloadUrl}
-                                    size={200}
-                                    marginSize={4}
-                                    bgColor="#ffffff"
-                                    fgColor="#000000"
-                                    title="作品動画のダウンロード"
-                                />
-
-                                <p>
-                                    <a href={downloadUrl}>
-                                        動画をダウンロード
-                                    </a>
-                                </p>
-                            </div>
-                        )}
-
-                        <label className='drawing-field'>
-                            <span>
-                                Background:{brightness}
-                            </span>
-
-                            <input
-                                type="range"
-                                min={0}
-                                max={255}
-                                step={1}
-                                value={brightness}
-                                style={rangeStyle(brightness, 0, 255)}
-                                onChange={(event) => {
-                                    const value = event.currentTarget.valueAsNumber
-                                    setBrightness(value)
-                                    sendBrightness(value)
-                                }}
-                            />
-                        </label>
                     </div>
+                </aside>
+                <aside
+                    id="drawing-background-panel"
+                    className="drawing-background-panel"
+                    aria-label="背景色"
+                    hidden={!backgroundPanelOpen}
+                >
+                    <strong>Background</strong>
+
+                    <ColorPicker
+                        initialHsv={{
+                            hue: 0,
+                            saturation: 0,
+                            value: 1,
+                        }}
+                        onChange={(nextColor) => {
+                            setBackgroundColor(nextColor)
+                            sendBackgroundColor(nextColor)
+                        }}
+                    />
                 </aside>
                 <aside
                     id="drawing-layer-panel"
                     className="drawing-layer-panel"
                     aria-label="レイヤー"
-                    hidden={!showUi}
+                    hidden={!layerPanelOpen}
                 >
                     <div className='drawing-layer-heading'>
-                        <strong>Layers</strong>
+                        <strong>Layer</strong>
 
                         <button
                             type='button'
@@ -742,6 +775,58 @@ export default function OfViewer() {
                     ) : (
                         <p>Glowレイヤーを選択すると発光を調整できます。</p>
 
+                    )}
+                </aside>
+
+                <aside
+                    id='drawing-qr-panel'
+                    className='drawing-qr-panel'
+                    aria-label='保存結果'
+                    hidden={!qrPanelOpen}
+                >
+                    <strong>QRcode</strong>
+
+                    {isRecording && (
+                        <p>
+                            {isUploading
+                                ? '動画を送信・変換しています…'
+                                : '録画しています…'}
+                        </p>
+                    )}
+
+                    {!isRecording &&
+                        !videoUrl &&
+                        !downloadUrl &&
+                        !recordingError && (
+                            <p>まだ保存されていません</p>
+                        )}
+
+                    {recordingError && (
+                        <p role="alert">{recordingError}</p>
+                    )}
+
+                    {videoUrl && (
+                        <a href={videoUrl} download="painting.webm">
+                            この端末に動画を保存
+                        </a>
+                    )}
+
+                    {downloadUrl && (
+                        <>
+                            <p>
+                                保存が完了しました。
+                                スマホでQRコードを読み取ってください。
+                            </p>
+
+                            <QRCodeSVG
+                                value={downloadUrl}
+                                size={200}
+                                marginSize={4}
+                                bgColor="#ffffff"
+                                fgColor="#000000"
+                                title="作品動画のダウンロード"
+                            />
+                        </>
                     )}
                 </aside>
             </div>

@@ -3,8 +3,8 @@
 #ifdef __EMSCRIPTEN__ //以下#endifまで、emscriptenでビルドするときのみ有効
 	#include <emscripten.h>
 
-EM_JS(int, getBackgroundBrightness, (), {
-	return window['paintBackgroundBrightness'] ?? 255;
+EM_JS(int, getBackgroundColor, (), {
+	return window['paintBackgroundColor'] ?? 0xffffff;
 })
 
 EM_JS(int, getPaintColor, (), {
@@ -257,7 +257,7 @@ void ofApp::update() {
 //--------------------------------------------------------------
 void ofApp::draw() {
 #ifdef __EMSCRIPTEN__
-	ofBackground(getBackgroundBrightness());
+	ofBackground(ofColor::fromHex(getBackgroundColor()));
 	const bool isPen = getPenMode() != 0;
 
 	if (isPen) {
@@ -302,13 +302,6 @@ void ofApp::draw() {
 		paintTool.selectedLayerId);
 #endif
 
-	// Temporary FPS display for Windows and Web performance checks.
-	ofPushStyle();
-	ofSetColor(255);
-	ofDrawBitmapStringHighlight(
-		"FPS: " + ofToString(ofGetFrameRate(), 1),
-		10, 20);
-	ofPopStyle();
 }
 
 //--------------------------------------------------------------
