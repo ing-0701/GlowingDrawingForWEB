@@ -805,12 +805,6 @@ export default function OfViewer() {
                         <p role="alert">{recordingError}</p>
                     )}
 
-                    {videoUrl && (
-                        <a href={videoUrl} download="painting.webm">
-                            この端末に動画を保存
-                        </a>
-                    )}
-
                     {downloadUrl && (
                         <>
                             <p>

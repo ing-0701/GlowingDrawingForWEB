@@ -21,6 +21,8 @@
 
 /* ヘッダー */
 .drawing-header {
+    /* キャンバス800px＋左右の枠線2px＋常設ボタンパネル100px */
+    width: calc(800px + 2px + 100px);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -257,7 +259,8 @@
 }
 
 /* 発光モードがオンのときのボタン */
-.drawing-app .drawing-glow-button[aria-pressed='true'] {
+.drawing-app .drawing-glow-button[aria-pressed='true'],
+.drawing-app .drawing-header-actions button[aria-expanded='true'] {
     background: #eee;
     /* オンの背景：明るい灰色 */
     color: #222;
@@ -268,7 +271,8 @@
 }
 
 /* オンの状態でマウスを重ねたとき */
-.drawing-app .drawing-glow-button[aria-pressed='true']:hover {
+.drawing-app .drawing-glow-button[aria-pressed='true']:hover,
+.drawing-app .drawing-header-actions button[aria-expanded='true']:hover {
     background: #fff;
     /* ホバー時の背景：白 */
     box-shadow: 0 0 12px rgba(255, 255, 255, 0.55);

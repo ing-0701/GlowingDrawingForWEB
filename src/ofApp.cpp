@@ -100,7 +100,7 @@ EM_JS(int, takePaintCommand, (), {
 
 EM_JS(double, getPaintCommandValue, (), {
 	return window['paintCommandValue'];
-	})
+})
 
 EM_JS(int, getPaintCommandLayerId, (), {
 	return window['paintCommandLayerId'];
@@ -189,7 +189,7 @@ void ofApp::update() {
 
 			// Reactの表示から消える直前の行が押される場合もあるため、
 			// 現在も存在するIDか確認してから選択する
-			for (const auto& layer : paintTool.layers) {
+			for (const auto & layer : paintTool.layers) {
 				if (layer->id == layerId) {
 					paintTool.selectedLayerId = layerId;
 					break;
@@ -217,7 +217,7 @@ void ofApp::update() {
 			const int layerId = getPaintCommandLayerId();
 			const float value = static_cast<float>(getPaintCommandValue());
 
-			for (auto& layer : paintTool.layers) {
+			for (auto & layer : paintTool.layers) {
 				if (layer->id != layerId) {
 					continue;
 				}
@@ -234,7 +234,7 @@ void ofApp::update() {
 
 				if (command == 9) {
 					sigma = value;
-				} else if (command == 10){
+				} else if (command == 10) {
 					strength = value;
 				} else {
 					period = value;
@@ -301,7 +301,6 @@ void ofApp::draw() {
 		paintTool.layers,
 		paintTool.selectedLayerId);
 #endif
-
 }
 
 //--------------------------------------------------------------
@@ -319,35 +318,7 @@ void ofApp::mouseMoved(int x, int y) {
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button) {
 	if (drawingFlag) {
-		paintTool.points.push_back(glm::vec2(x, y));
-
-		//"When the coordinates are too far apart, interpolate the values in between"
-		if (paintTool.points.size() > 1) {
-			const glm::vec2 currentPoint = paintTool.points.back();
-			const glm::vec2 previousPoint = paintTool.points[paintTool.points.size() - 2];
-
-			vector<glm::vec2> newPoints; //Points for interpolation
-			const float pointsDist = glm::distance(currentPoint, previousPoint);
-			float idealDist = 3;
-			if (pointsDist > idealDist) {
-				float NumberOfPoint = pointsDist / idealDist;
-				float span = 1 / NumberOfPoint;
-
-				for (float i = span; i < 1; i += span) {
-					glm::vec2 point = glm::mix(currentPoint, previousPoint, i);
-					float lastDist = glm::distance(point, previousPoint); //`lastDist` is the distance between the last point to be interpolated and the last point before interpolation.
-					//If `lastDist` is too small, the last point is unnecessary.
-					if (lastDist > 0.7) {
-						newPoints.push_back(point);
-					}
-				}
-
-				paintTool.points.insert(
-					paintTool.points.end() - 1,
-					newPoints.begin(),
-					newPoints.end());
-			}
-		}
+		paintTool.addStrokePoint(glm::vec2(x, y));
 	}
 }
 
@@ -390,10 +361,8 @@ void ofApp::mousePressed(int x, int y, int button) {
 
 	if (0 <= x && x < mainWidth && 0 <= y && y < mainHeight) {
 
-		paintTool.beginStroke();
-
+		paintTool.beginStroke(glm::vec2(x, y));
 		drawingFlag = true;
-		paintTool.points.push_back(glm::vec2(x, y));
 	}
 
 #ifndef __EMSCRIPTEN__
@@ -423,6 +392,8 @@ void ofApp::mouseReleased(int x, int y, int button) {
 #endif
 
 	if (drawingFlag) {
+		paintTool.finishStroke(glm::vec2(x, y));
+
 #ifdef __EMSCRIPTEN__
 		const bool isPen = getPenMode() != 0;
 		if (isPen) {
@@ -525,7 +496,7 @@ void ofApp::syncLayerStateToWeb() {
 	state["selectedLayerId"] = paintTool.selectedLayerId;
 	state["layers"] = ofJson::array();
 
-	for (const auto& layer : paintTool.layers) {
+	for (const auto & layer : paintTool.layers) {
 		ofJson item;
 
 		item["id"] = layer->id;
@@ -593,7 +564,7 @@ void ofApp::syncGlowControls() {
 	syncingGlowControls = false;
 }
 
-void ofApp::onGlowParameterChanged(float&) {
+void ofApp::onGlowParameterChanged(float &) {
 	if (syncingGlowControls || drawingFlag) {
 		return;
 	}
