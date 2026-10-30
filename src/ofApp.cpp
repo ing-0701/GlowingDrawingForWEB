@@ -157,6 +157,16 @@ void ofApp::setup() {
 //--------------------------------------------------------------
 void ofApp::update() {
 #ifdef __EMSCRIPTEN__
+	// 初回のupdateで、画面更新ごとに実行する設定へ変更する
+	static bool loopTimingConfigured = false;
+
+	if (!loopTimingConfigured) {
+		const int result = emscripten_set_main_loop_timing(EM_TIMING_RAF, 1);
+
+		loopTimingConfigured = (result == 0);
+	}
+	// 上の内容ちゃんと理解してないからいつか確認して
+
 	if (drawingFlag) {
 		return;
 	}
@@ -291,6 +301,14 @@ void ofApp::draw() {
 		paintTool.layers,
 		paintTool.selectedLayerId);
 #endif
+
+	// Temporary FPS display for Windows and Web performance checks.
+	ofPushStyle();
+	ofSetColor(255);
+	ofDrawBitmapStringHighlight(
+		"FPS: " + ofToString(ofGetFrameRate(), 1),
+		10, 20);
+	ofPopStyle();
 }
 
 //--------------------------------------------------------------
@@ -379,7 +397,7 @@ void ofApp::mousePressed(int x, int y, int button) {
 
 	if (0 <= x && x < mainWidth && 0 <= y && y < mainHeight) {
 
-		paintTool.strokeLayerId = paintTool.selectedLayerId;
+		paintTool.beginStroke();
 
 		drawingFlag = true;
 		paintTool.points.push_back(glm::vec2(x, y));

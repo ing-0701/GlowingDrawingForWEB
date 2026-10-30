@@ -20,6 +20,7 @@ PaintTool::PaintTool(int mainWidth, int mainHeight) {
 
 
 	preFbo2D.allocate(s);
+	strokeCheckpointFbo.allocate(s);
 	historySwapFbo.allocate(s);
 
 	for (int i = 0; i < UNDO_CAPACITY; i++) {
@@ -27,17 +28,33 @@ PaintTool::PaintTool(int mainWidth, int mainHeight) {
 	}
 }
 
+void PaintTool::beginStroke() {
+	strokeLayerId = selectedLayerId;
+
+	points.clear();
+	strokePointStartIndex = 0;
+
+	Layer & layer = getLayer(strokeLayerId);
+
+	//今回の一筆を描くための土台を用意する
+	copyFbo(layer.canvas, strokeCheckpointFbo);
+}
+
 void PaintTool::drawLine(bool penSwitch, float eraserAlpha) {
 	Layer & layer = getLayer(strokeLayerId);
-	ofFbo & base = layer.canvas;
 
 	ofFill();
 
 	preFbo2D.begin();
 	ofClear(0, 0, 0, 0);
+
+    // 途中保存した画像を、そのままコピーする
+	ofDisableAlphaBlending();
 	ofSetColor(255, 255, 255, 255);
-	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	base.draw(0, 0);
+	strokeCheckpointFbo.draw(0, 0);
+
+	// その上に未保存の点を描く
+	ofEnableAlphaBlending();
 
 	if (penSwitch) {
 		ofSetColor(color);
@@ -49,11 +66,27 @@ void PaintTool::drawLine(bool penSwitch, float eraserAlpha) {
 			GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
 	}
 
-	for (int i = 0; i < points.size(); i++) {
+	for (int i = strokePointStartIndex; i < static_cast<int>(points.size()); i++) {
 		ofDrawCircle(points[i].x, points[i].y, strokeSize * 25);
 	}
 
 	preFbo2D.end();
+
+	const int pendingPointCount = static_cast<int>(points.size()) - strokePointStartIndex;
+
+	if (pendingPointCount >= STROKE_CHUNK_SIZE) {
+		// ここまでの描画結果を途中保存する
+		copyFbo(preFbo2D, strokeCheckpointFbo);
+
+		// 次の点との補間に使うため、最後の座標だけ残す
+		const glm::vec2 lastPoint = points.back();
+
+		points.clear();
+		points.push_back(lastPoint);
+
+		// 残した点はすでに画像へ描画済みなので、再描画しない
+		strokePointStartIndex = 1;
+	}
 
 	layer.filter->markDirty();
 }
@@ -315,6 +348,7 @@ void PaintTool::commitStroke() {
 	layer.filter->markDirty();
 
 	points.clear();
+	strokePointStartIndex = 0;
 	strokeLayerId = 0;
 }
 

@@ -11,7 +11,7 @@ void GlowFilter::setup(int width, int height) {
 	ofFbo::Settings settings;
 	settings.width = width;
 	settings.height = height;
-	settings.internalformat = GL_RGBA32F;
+	settings.internalformat = GL_RGBA16F;
 #ifdef __EMSCRIPTEN__
 	settings.textureTarget = GL_TEXTURE_2D;
 #endif // __EMSCRIPTEN__

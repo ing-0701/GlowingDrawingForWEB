@@ -41,7 +41,18 @@ public:
 	ofColor color;
 	vector<glm::vec2> points;
 	ofFbo preFbo2D;
+	ofFbo strokeCheckpointFbo;
+
+	// この数の未保存点がたまったら途中保存する
+	static constexpr int STROKE_CHUNK_SIZE = 10;
+
 	ofFbo historySwapFbo;
+
+	// pointsのうち、描画を始める位置
+	// 0：先頭から描く
+	// 1：先頭は接続用の点なので、描かずに飛ばす
+	int strokePointStartIndex = 0;
+
 	static const int UNDO_CAPACITY = 20;
 	HistoryEntry history[UNDO_CAPACITY];
 	int undoWriteIndex = 0;
@@ -49,6 +60,9 @@ public:
 	int redoCount = 0;
 
 	PaintTool(int mainWidth, int mainHeight);
+
+	// 一筆を描き始めるための準備
+	void beginStroke();
 
 	void drawLine(bool penSwith, float eraserAlpha);
 	void drawCanvas(bool drawingFlag);
