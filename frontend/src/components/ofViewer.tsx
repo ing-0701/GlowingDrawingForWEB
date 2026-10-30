@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import ColorPicker from './ColorPicker'
 import './ofViewer.css'
 import { rangeStyle } from './rangeStyle'
+import { QRCodeSVG } from 'qrcode.react'
 
 type GlowParameters = {
     sigma: number
@@ -68,15 +69,21 @@ export default function OfViewer() {
     const iframeRef = useRef<HTMLIFrameElement>(null)
     const draggedLayerIdRef = useRef<number | null>(null)
 
+    const [isRecording, setIsRecording] = useState(false)
+    const [recordingError, setRecordingError] = useState('')
+    const [videoUrl, setVideoUrl] = useState<string | null>(null)
+    const [isUploading, setIsUploading] = useState(false)
+    const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
+
     useEffect(() => {
         const timerId = window.setInterval(() => {
             const paintWindow = iframeRef.current?.contentWindow as PaintWindow | null
-            
+
             // 命令の処理待ちなら、変更前の状態でUIを上書きしない
-            if((paintWindow?.paintCommands?.length ?? 0) > 0){
+            if ((paintWindow?.paintCommands?.length ?? 0) > 0) {
                 return
             }
-            
+
             const nextState = paintWindow?.paintLayerState
 
             if (!nextState) {
@@ -91,6 +98,14 @@ export default function OfViewer() {
             window.clearInterval(timerId)
         }
     }, [])
+
+    useEffect(() => {
+        if (!videoUrl) return
+
+        return () => {
+            URL.revokeObjectURL(videoUrl)
+        }
+    }, [videoUrl])
 
     function sendBrightness(value: number) {
         const paintWindow = iframeRef.current?.contentWindow
@@ -164,7 +179,7 @@ export default function OfViewer() {
         layerId: number,
         parameter: keyof GlowParameters,
         value: number,
-    ){
+    ) {
         sendCommand({
             type: 'setGlowParameter',
             layerId,
@@ -174,19 +189,19 @@ export default function OfViewer() {
 
         // C++からの返答を待つ間も、つまみをすぐに動かす
         setLayerState((previous) => {
-            if(!previous) return previous
-            
+            if (!previous) return previous
+
             return {
                 ...previous,
-                layers: previous.layers.map((layer) =>{
-                    if(layer.id !== layerId || !layer.glow){
+                layers: previous.layers.map((layer) => {
+                    if (layer.id !== layerId || !layer.glow) {
                         return layer
                     }
 
-                    return{
+                    return {
                         ...layer,
                         glow: {
-                            ...layer.glow, 
+                            ...layer.glow,
                             [parameter]: value,
                         }
                     }
@@ -200,6 +215,133 @@ export default function OfViewer() {
     )
 
     const selectedGlow = selectedLayer?.glow
+
+    async function saveVideo() {
+        if (isRecording) return
+
+        setIsRecording(true)
+        setRecordingError('')
+        setVideoUrl(null)
+        setDownloadUrl(null)
+        setIsUploading(false)
+
+        let stream: MediaStream | null = null
+        let stopTimer: number | undefined
+
+        try {
+            // 同じサイト内のiframeから、oFのcanvasを取得する
+            const canvas =
+                iframeRef.current?.contentDocument
+                    ?.querySelector<HTMLCanvasElement>('#canvas')
+
+            if (!canvas) {
+                throw new Error('ペイント画面がまだ読み込まれていません。')
+            }
+
+            const mimeType = 'video/webm;codecs=vp8'
+
+            if (
+                typeof MediaRecorder === 'undefined' ||
+                !MediaRecorder.isTypeSupported(mimeType)
+            ) {
+                throw new Error('このブラウザは今回の録画形式に対応していません。')
+            }
+
+            // canvasから、最大30fpsを指定して映像を取り出す
+            stream = canvas.captureStream(30)
+
+            const recorder = new MediaRecorder(stream, {
+                mimeType,
+                videoBitsPerSecond: 4_000_000,
+            })
+
+            const chunks: Blob[] = []
+
+            const video = await new Promise<Blob>((resolve, reject) => {
+                recorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        chunks.push(event.data)
+                    }
+                }
+
+                recorder.onerror = () => {
+                    reject(new Error('録画中にエラーが発生しました。'))
+                }
+
+                recorder.onstop = () => {
+                    const blob = new Blob(chunks, {
+                        type: recorder.mimeType,
+                    })
+
+                    if (blob.size === 0) {
+                        reject(new Error('動画データを取得できませんでした。'))
+                        return
+                    }
+
+                    resolve(blob)
+                }
+
+                recorder.start()
+
+                stopTimer = window.setTimeout(() => {
+                    if (recorder.state === 'recording') {
+                        recorder.stop()
+                    }
+                }, 6000)
+            })
+
+            setVideoUrl(URL.createObjectURL(video))
+
+            // 録画は終わったので、映像取得をここで止める
+            stream?.getTracks().forEach((track) => track.stop())
+
+            setIsUploading(true)
+
+            const formData = new FormData()
+            formData.append('file', video, 'painting.webm')
+
+            const response = await fetch('/api/videos', {
+                method: 'POST',
+                body: formData,
+            })
+
+            if (!response.ok) {
+                throw new Error(
+                    `動画の送信に失敗しました（HTTP ${response.status}）。`
+                )
+            }
+
+            const result = await response.json()
+
+            if (typeof result.download_path !== 'string') {
+                throw new Error('サーバーから動画の取得先が返されませんでした。')
+            }
+
+            const url = new URL(
+                result.download_path,
+                window.location.origin
+            )
+
+            setDownloadUrl(url.href)
+
+        } catch (error) {
+            setRecordingError(
+                error instanceof Error
+                    ? error.message
+                    : '録画に失敗しました。'
+            )
+        } finally {
+            if (stopTimer !== undefined) {
+                window.clearTimeout(stopTimer)
+            }
+
+            // 映像の取り出しも終了する
+            stream?.getTracks().forEach((track) => track.stop())
+
+            setIsUploading(false)
+            setIsRecording(false)
+        }
+    }
 
     return (
         <section className='drawing-app'>
@@ -339,6 +481,52 @@ export default function OfViewer() {
                             DELETE ALL
                         </button>
 
+                        <button
+                            type='button'
+                            onClick={() => void saveVideo()}
+                            disabled={isRecording || !layerState}
+                        >
+                            {isUploading
+                                ? '送信中…'
+                                : isRecording
+                                    ? '録画中…'
+                                    : 'save'}
+                        </button>
+
+                        {recordingError && (
+                            <p role='alert'>{recordingError}</p>
+                        )}
+
+                        {videoUrl && (
+                            <a href={videoUrl} download="painting.webm">
+                                この端末に動画を保存
+                            </a>
+                        )}
+
+                        {downloadUrl && (
+                            <div>
+                                <p>
+                                    保存が完了しました。
+                                    スマホでQRコードを読み取ってください。
+                                </p>
+
+                                <QRCodeSVG
+                                    value={downloadUrl}
+                                    size={200}
+                                    marginSize={4}
+                                    bgColor="#ffffff"
+                                    fgColor="#000000"
+                                    title="作品動画のダウンロード"
+                                />
+
+                                <p>
+                                    <a href={downloadUrl}>
+                                        動画をダウンロード
+                                    </a>
+                                </p>
+                            </div>
+                        )}
+
                         <label className='drawing-field'>
                             <span>
                                 Background:{brightness}
@@ -417,7 +605,7 @@ export default function OfViewer() {
                                             : 'drawing-layer-row'
                                     }
                                     onDragOver={(event) => {
-                                        if(draggedLayerIdRef.current === null){
+                                        if (draggedLayerIdRef.current === null) {
                                             return
                                         }
 
@@ -427,14 +615,14 @@ export default function OfViewer() {
                                     onDrop={(event) => {
                                         const draggedId = draggedLayerIdRef.current
 
-                                        if(draggedId === null){
+                                        if (draggedId === null) {
                                             return
                                         }
 
                                         event.preventDefault()
                                         draggedLayerIdRef.current = null
 
-                                        if(draggedId === layer.id){
+                                        if (draggedId === layer.id) {
                                             return
                                         }
 
@@ -521,8 +709,8 @@ export default function OfViewer() {
                                 },
                             ] as const).map((setting) => (
                                 <label
-                                key={setting.key}
-                                className='drawing-field'
+                                    key={setting.key}
+                                    className='drawing-field'
                                 >
                                     <span>
                                         {setting.label}:
@@ -530,29 +718,29 @@ export default function OfViewer() {
                                     </span>
 
                                     <input
-                                    type='range'
-                                    min={setting.min}
-                                    max={setting.max}
-                                    step={0.01}
-                                    value={selectedGlow[setting.key]}
-                                    style={rangeStyle(
-                                        selectedGlow[setting.key],
-                                        setting.min,
-                                        setting.max
-                                    )}
-                                    onChange={(event) => {
-                                        sendGlowParameter(
-                                            selectedLayer.id,
-                                            setting.key,
-                                            event.currentTarget.valueAsNumber,
-                                        )
-                                    }}
+                                        type='range'
+                                        min={setting.min}
+                                        max={setting.max}
+                                        step={0.01}
+                                        value={selectedGlow[setting.key]}
+                                        style={rangeStyle(
+                                            selectedGlow[setting.key],
+                                            setting.min,
+                                            setting.max
+                                        )}
+                                        onChange={(event) => {
+                                            sendGlowParameter(
+                                                selectedLayer.id,
+                                                setting.key,
+                                                event.currentTarget.valueAsNumber,
+                                            )
+                                        }}
                                     />
                                 </label>
                             ))}
                         </div>
                     ) : (
-                            <p>Glowレイヤーを選択すると発光を調整できます。</p>
+                        <p>Glowレイヤーを選択すると発光を調整できます。</p>
 
                     )}
                 </aside>

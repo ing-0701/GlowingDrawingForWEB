@@ -21,3 +21,6 @@ Thumbs.db
 # Visual Studio build files
 *.exe
 *.pdb
+
+# イベント用の認証情報
+/deploy/.htpasswd
