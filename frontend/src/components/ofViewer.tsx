@@ -63,8 +63,7 @@ export default function OfViewer() {
     const [eraserSize, setEraserSize] = useState(0.1)
     const [eraserAlpha, setEraserAlpha] = useState(1)
     const [isPen, setIsPen] = useState(true)
-    const [colorPanelOpen, setColorPanelOpen] = useState(false)
-    const [linePanelOpen, setLinePanelOpen] = useState(false)
+    const [brushPanelOpen, setBrushPanelOpen] = useState(false)
     const [layerPanelOpen, setLayerPanelOpen] = useState(false)
     const [layerState, setLayerState] = useState<PaintLayerState | null>(null)
     const [layerMenuOpen, setLayerMenuOpen] = useState(false)
@@ -356,21 +355,12 @@ export default function OfViewer() {
 
                 <div className='drawing-header-actions'>
                     <button
-                        type='button'
-                        aria-expanded={colorPanelOpen}
-                        aria-controls='drawing-color-panel'
-                        onClick={() => setColorPanelOpen((open) => !open)}
+                        type="button"
+                        aria-expanded={brushPanelOpen}
+                        aria-controls="drawing-brush-panel"
+                        onClick={() => setBrushPanelOpen((open) => !open)}
                     >
-                        Color
-                    </button>
-
-                    <button
-                        type='button'
-                        aria-expanded={linePanelOpen}
-                        aria-controls='drawing-line-panel'
-                        onClick={() => setLinePanelOpen((open) => !open)}
-                    >
-                        Line
+                        Brush
                     </button>
 
                     <button
@@ -477,17 +467,16 @@ export default function OfViewer() {
                 </aside>
 
                 <aside
-                    id='drawing-sidebar'
-                    className='drawing-sidebar'
-                    aria-label='描画設定'
-                    hidden={!colorPanelOpen && !linePanelOpen}
-
+                    id="drawing-brush-panel"
+                    className="drawing-sidebar"
+                    aria-label="ブラシ設定"
+                    hidden={!brushPanelOpen}
                 >
+                    <strong className="drawing-brush-heading">ブラシ設定</strong>
                     <div
-                        id='drawing-color-panel'
-                        hidden={!colorPanelOpen}
+                        className="drawing-brush-color"
+                        inert={!isPen}
                     >
-                        <strong>Color</strong>
                         <ColorPicker
                             onChange={(nextColor) => {
                                 setColor(nextColor)
@@ -496,19 +485,11 @@ export default function OfViewer() {
                         />
                     </div>
 
-                    <div
-                        className='drawing-controls'
-                        hidden={!linePanelOpen}
-                    >
-                        <div
-                            id="drawing-line-panel"
-                            className="drawing-line-panel"
-                            hidden={!linePanelOpen}
-                        >
-                            <strong>Line</strong>
+                    <div className="drawing-controls">
+                        <div className="drawing-line-panel">
                             <label className='drawing-field'>
                                 <span>
-                                    Size
+                                    太さ
                                     :{isPen ? penSize : eraserSize}
                                 </span>
 
@@ -534,7 +515,7 @@ export default function OfViewer() {
 
                             <label className='drawing-field'>
                                 <span>
-                                    Alpha
+                                    透明度
                                     :{isPen ? penAlpha : eraserAlpha}
                                 </span>
                                 <input
@@ -567,7 +548,7 @@ export default function OfViewer() {
                     aria-label="背景色"
                     hidden={!backgroundPanelOpen}
                 >
-                    <strong>Background</strong>
+                    <strong>背景色</strong>
 
                     <ColorPicker
                         initialHsv={{
@@ -588,7 +569,7 @@ export default function OfViewer() {
                     hidden={!layerPanelOpen}
                 >
                     <div className='drawing-layer-heading'>
-                        <strong>Layer</strong>
+                        <strong>レイヤー</strong>
 
                         <button
                             type='button'
@@ -724,19 +705,19 @@ export default function OfViewer() {
                             {([
                                 {
                                     key: 'sigma',
-                                    label: 'sigma',
+                                    label: '光の広がり',
                                     min: 1.0,
                                     max: 3.0,
                                 },
                                 {
                                     key: 'strength',
-                                    label: 'strength',
+                                    label: '光の強さ',
                                     min: 1.0,
                                     max: 3.0,
                                 },
                                 {
                                     key: 'period',
-                                    label: 'period(秒)',
+                                    label: '点滅周期(秒)',
                                     min: 0.3,
                                     max: 3.0,
                                 },
@@ -772,10 +753,7 @@ export default function OfViewer() {
                                 </label>
                             ))}
                         </div>
-                    ) : (
-                        <p>Glowレイヤーを選択すると発光を調整できます。</p>
-
-                    )}
+                    ) : null}
                 </aside>
 
                 <aside
@@ -784,12 +762,12 @@ export default function OfViewer() {
                     aria-label='保存結果'
                     hidden={!qrPanelOpen}
                 >
-                    <strong>QRcode</strong>
+                    <strong>QRコード</strong>
 
                     {isRecording && (
                         <p>
                             {isUploading
-                                ? '動画を送信・変換しています…'
+                                ? 'QRコードを用意しています…'
                                 : '録画しています…'}
                         </p>
                     )}

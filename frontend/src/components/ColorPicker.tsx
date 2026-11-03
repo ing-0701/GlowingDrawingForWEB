@@ -208,8 +208,8 @@ export default function ColorPicker({
             </div> */}
 
             <label style={{ display: 'block', marginTop: 8, padding: '0 12px' }}>
-                Hue
                 <input
+                    aria-label="色相"
                     className="hue-range"
                     type="range"
                     min={0}

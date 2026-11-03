@@ -399,14 +399,14 @@
     border-top: 1px solid #666;
 }
 
-/* Line内のボタンとスライダーを縦に並べる */
-#drawing-color-panel > strong {
-    display: block;
-    padding: 12px;
+/* 統合したブラシパネルの見出し */
+.drawing-brush-heading {
+    padding: 12px 12px 0;
 }
 
-.drawing-line-panel > strong {
-    padding-top: 12px;
+/* 消しゴムモードでは色の設定部分を暗くする */
+.drawing-brush-color[inert] {
+    opacity: 0.35;
 }
 
 .drawing-line-panel {
