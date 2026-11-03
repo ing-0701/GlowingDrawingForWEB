@@ -84,8 +84,13 @@ void PaintTool::appendQuadratic(
 	const float firstLength = glm::distance(start, control);
 	const float secondLength = glm::distance(control, end);
 
+	// 視点→制御点と、制御点→終点の二本のうち長いほう
 	const float longestLength = firstLength > secondLength ? firstLength : secondLength;
 
+	// ベジェ曲線の式の定義上、t=0からt=1間のどの場所でも速度は2*longestLengthを超えない
+	// 曲線の長さは曲線の速度をt=0~1で積分したら求められる
+	// その結果長さの上限が2*longestLengthだと求められる
+	// よって、曲線の移動ステップを2*longestLengthにすれば、一度のステップでの移動量が1を超えることはない
 	// 曲線を約1px以下の小区間に分けてたどる
 	int steps = static_cast<int>(
 		std::ceil(2.0f * longestLength));
@@ -99,10 +104,12 @@ void PaintTool::appendQuadratic(
 
 		const float u = 1.0f - t;
 
+		// ベジェ曲線の式に基づいたステップごとの点の位置の計算
 		const glm::vec2 position = u * u * start
 			+ 2.0f * u * t * control
 			+ t * t * end;
 
+		// 曲線に沿った距離が3pxごとになるよう座標を追加する
 		appendPathSample(position);
 	}
 }
