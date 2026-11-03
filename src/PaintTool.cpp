@@ -28,16 +28,119 @@ PaintTool::PaintTool(int mainWidth, int mainHeight) {
 	}
 }
 
-void PaintTool::beginStroke() {
+void PaintTool::beginStroke(const glm::vec2 & position) {
 	strokeLayerId = selectedLayerId;
 
 	points.clear();
 	strokePointStartIndex = 0;
 
+	// 曲線計算と距離計測の開始位置
+	previousInputPoint = position;
+	curveStartPoint = position;
+	previousPathSample = position;
+	distanceSinceStamp = 0.0f;
+
+	// 押した場所には、最初の円を1つ置く
+	points.push_back(position);
+
 	Layer & layer = getLayer(strokeLayerId);
 
-	//今回の一筆を描くための土台を用意する
+	// 今回の一筆を描くための土台
 	copyFbo(layer.canvas, strokeCheckpointFbo);
+}
+
+void PaintTool::appendPathSample(const glm::vec2 & position) {
+	constexpr float spacing = 3.0f;
+
+	const glm::vec2 delta = position - previousPathSample;
+	const float length = glm::length(delta);
+
+	if (length <= 0.0001f) {
+		return;
+	}
+
+	const glm::vec2 direction = delta / length;
+
+	// この小区間の始点から、次の円を置く位置までの距離
+	float nextDistance = spacing - distanceSinceStamp;
+
+	while (nextDistance <= length) {
+		points.push_back(
+			previousPathSample + direction * nextDistance);
+
+		nextDistance += spacing;
+	}
+
+	// 次の小区間へ持ち越す距離
+	distanceSinceStamp = length - (nextDistance - spacing);
+	previousPathSample = position;
+}
+
+void PaintTool::appendQuadratic(
+	const glm::vec2 & start,
+	const glm::vec2 & control,
+	const glm::vec2 & end) {
+
+	const float firstLength = glm::distance(start, control);
+	const float secondLength = glm::distance(control, end);
+
+	const float longestLength = firstLength > secondLength ? firstLength : secondLength;
+
+	// 曲線を約1px以下の小区間に分けてたどる
+	int steps = static_cast<int>(
+		std::ceil(2.0f * longestLength));
+
+	if (steps < 1) {
+		steps = 1;
+	}
+
+	for (int i = 1; i <= steps; ++i) {
+		const float t = static_cast<float>(i) / static_cast<float>(steps);
+
+		const float u = 1.0f - t;
+
+		const glm::vec2 position = u * u * start
+			+ 2.0f * u * t * control
+			+ t * t * end;
+
+		appendPathSample(position);
+	}
+}
+
+void PaintTool::addStrokePoint(const glm::vec2 & position) {
+	// 同じ位置が繰り返し届いた場合は、何もしない
+	if (glm::distance(position, previousInputPoint) <= 0.0001f) {
+		return;
+	}
+
+	const glm::vec2 midpoint = (previousInputPoint + position) * 0.5f;
+
+	appendQuadratic(
+		curveStartPoint,
+		previousInputPoint,
+		midpoint);
+
+	curveStartPoint = midpoint;
+	previousInputPoint = position;
+}
+
+void PaintTool::finishStroke(const glm::vec2 & position) {
+	// 最後のドラッグ位置とリリース位置が違う場合も取り込む
+	addStrokePoint(position);
+
+	// 中点で止まっていた線を、最後の入力位置までつなぐ
+	appendQuadratic(
+		curveStartPoint,
+		previousInputPoint,
+		previousInputPoint);
+
+	// 3px未満の余りがあっても、終点には円を置く
+	if (distanceSinceStamp > 0.0001f) {
+		points.push_back(previousInputPoint);
+	}
+
+	distanceSinceStamp = 0.0f;
+	curveStartPoint = previousInputPoint;
 }
 
 void PaintTool::drawLine(bool penSwitch, float eraserAlpha) {

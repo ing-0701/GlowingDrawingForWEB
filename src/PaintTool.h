@@ -62,7 +62,38 @@ public:
 	PaintTool(int mainWidth, int mainHeight);
 
 	// 一筆を描き始めるための準備
-	void beginStroke();
+	void beginStroke(const glm::vec2 & position);
+
+	// 以下補間のための緊急コード、未確認！！
+
+	// ドラッグで届いた入力座標を追加する
+	void addStrokePoint(const glm::vec2 & position);
+
+	// 線の終端まで描画点を追加する
+	void finishStroke(const glm::vec2 & position);
+
+	// 2次ベジェ曲線を細かくたどる
+	void appendQuadratic(
+		const glm::vec2 & start,
+		const glm::vec2 & control,
+		const glm::vec2 & end);
+
+	// 曲線をたどった距離に応じて、描画点を追加する
+	void appendPathSample(const glm::vec2 & position);
+
+	// 直前に届いた、補間前の入力座標
+	glm::vec2 previousInputPoint { 0.0f, 0.0f };
+
+	// 次のベジェ曲線の始点
+	glm::vec2 curveStartPoint { 0.0f, 0.0f };
+
+	// 曲線を細かくたどる際の直前の座標
+	glm::vec2 previousPathSample { 0.0f, 0.0f };
+
+	// 最後に円を置いてから進んだ距離
+	float distanceSinceStamp = 0.0f;
+
+	// ここまで！！
 
 	void drawLine(bool penSwith, float eraserAlpha);
 	void drawCanvas(bool drawingFlag);
