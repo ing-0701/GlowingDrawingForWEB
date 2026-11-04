@@ -63,6 +63,8 @@ void PaintTool::appendPathSample(const glm::vec2 & position) {
 
 	// この小区間の始点から、次の円を置く位置までの距離
 	float nextDistance = spacing - distanceSinceStamp;
+	// distanceSinceStampは3pxを超えるまでこれまでの距離が蓄積する
+	// 例えば過去の三回のステップがそれぞれ0.7px, 0.8px, 0.8px だったならdistanceSinceStampは2.3
 
 	while (nextDistance <= length) {
 		points.push_back(
@@ -136,6 +138,7 @@ void PaintTool::finishStroke(const glm::vec2 & position) {
 	addStrokePoint(position);
 
 	// 中点で止まっていた線を、最後の入力位置までつなぐ
+	// 上のaddStrokePointによってpreviousInputPoint == positionになってる
 	appendQuadratic(
 		curveStartPoint,
 		previousInputPoint,
