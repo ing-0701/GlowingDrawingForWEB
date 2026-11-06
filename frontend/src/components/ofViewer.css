@@ -487,27 +487,46 @@
     display: none;
 }
 
-/* 太さスライダーの操作中は、指の動きをページスクロールに使わない */
-.drawing-size-slider {
-    touch-action: none;
-}
 
-/* 太さ確認用の正方形 */
-.drawing-size-preview {
-    width: 96px;
-    height: 96px;
-    margin: 12px auto 0;
-    border: 1px solid #aaa;
-    background: #222;
-
+/* アプリ下部の案内パネル3つを横並びにする */
+.drawing-info-panels {
     display: grid;
-    place-items: center;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
 
-    pointer-events: none;
+    width: 902px;
+    margin-top: 12px;
 }
 
-/* 実際のブラシ直径に合わせる円 */
-.drawing-size-preview-circle {
-    border-radius: 50%;
-    background: #fff;
+/* 各案内パネル */
+.drawing-info-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+
+    min-width: 0;
+    min-height: 120px;
+    padding: 12px;
+
+    border: 1px solid #fff;
+    background: var(--panel-bg);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+}
+
+/* QRコード画像 */
+.drawing-info-panel img {
+    display: block;
+    width: 84px;
+    height: 84px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+/* 案内文 */
+.drawing-info-panel p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: nowrap;
 }

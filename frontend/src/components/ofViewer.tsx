@@ -855,8 +855,44 @@ export default function OfViewer() {
                             />
                         </>
                     )}
+
                 </aside>
+            </div>
+
+            {/* アプリ公開・アンケート・SNSの案内 */}
+            <div className="drawing-info-panels">
+                <div className="drawing-info-panel">
+                    <p>
+                        改善＆機能追加をして<br />
+                        WEBアプリとしての公開を<br />
+                        計画しています！
+                    </p>
+                </div>
+
+                <div className="drawing-info-panel">
+                    <img
+                        src="/images/qrcode_forms.png"
+                        alt="ご意見・ご感想フォームのQRコード"
+                    />
+                    <p>
+                        ◀ご意見＆ご感想<br />
+                        ㅤ是非お気軽に！
+                    </p>
+                </div>
+
+                <div className="drawing-info-panel">
+                    <img
+                        src="/images/qrcode_x.png"
+                        alt="XアカウントのQRコード"
+                    />
+                    <p>
+                        ◀リリースは<br />
+                        ㅤこちらのアカウントから<br />
+                        ㅤご報告します！
+                    </p>
+                </div>
             </div>
         </section>
     )
 }
+
