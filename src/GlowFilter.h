@@ -44,8 +44,8 @@ private:
 
 	// 減衰関数 I(r) = 1 / (1 + (r/a)^2) のa。
 	// 各ガウシアンのsigmaは、この値にsigmaRatiosを掛けて求める。
-	float glowSigma = 2.4f;
-	float glowStrength = 3.0f;
+	float glowSigma = 2.5f;
+	float glowStrength = 4.5f;
 	float glowPeriod = 1.0f;
 
 	void blurInto(
