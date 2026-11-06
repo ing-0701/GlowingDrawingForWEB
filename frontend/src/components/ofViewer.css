@@ -486,3 +486,28 @@
 .drawing-controls[hidden] {
     display: none;
 }
+
+/* 太さスライダーの操作中は、指の動きをページスクロールに使わない */
+.drawing-size-slider {
+    touch-action: none;
+}
+
+/* 太さ確認用の正方形 */
+.drawing-size-preview {
+    width: 96px;
+    height: 96px;
+    margin: 12px auto 0;
+    border: 1px solid #aaa;
+    background: #222;
+
+    display: grid;
+    place-items: center;
+
+    pointer-events: none;
+}
+
+/* 実際のブラシ直径に合わせる円 */
+.drawing-size-preview-circle {
+    border-radius: 50%;
+    background: #fff;
+}
