@@ -393,20 +393,20 @@ export default function OfViewer() {
 
                     <button
                         type="button"
-                        aria-expanded={backgroundPanelOpen}
-                        aria-controls="drawing-background-panel"
-                        onClick={() => setBackgroundPanelOpen((open) => !open)}
-                    >
-                        Background
-                    </button>
-
-                    <button
-                        type="button"
                         aria-expanded={layerPanelOpen}
                         aria-controls="drawing-layer-panel"
                         onClick={() => setLayerPanelOpen((open) => !open)}
                     >
                         Layer
+                    </button>
+
+                    <button
+                        type="button"
+                        aria-expanded={backgroundPanelOpen}
+                        aria-controls="drawing-background-panel"
+                        onClick={() => setBackgroundPanelOpen((open) => !open)}
+                    >
+                        Background
                     </button>
 
                     <button
@@ -597,26 +597,6 @@ export default function OfViewer() {
                     </div>
                 </aside>
                 <aside
-                    id="drawing-background-panel"
-                    className="drawing-background-panel"
-                    aria-label="背景色"
-                    hidden={!backgroundPanelOpen}
-                >
-                    <strong>背景色</strong>
-
-                    <ColorPicker
-                        initialHsv={{
-                            hue: 0,
-                            saturation: 0,
-                            value: 1,
-                        }}
-                        onChange={(nextColor) => {
-                            setBackgroundColor(nextColor)
-                            sendBackgroundColor(nextColor)
-                        }}
-                    />
-                </aside>
-                <aside
                     id="drawing-layer-panel"
                     className="drawing-layer-panel"
                     aria-label="レイヤー"
@@ -760,14 +740,14 @@ export default function OfViewer() {
                                 {
                                     key: 'sigma',
                                     label: '光の広がり',
-                                    min: 0.1,
-                                    max: 5.0,
+                                    min: 1.0,
+                                    max: 4.0,
                                 },
                                 {
                                     key: 'strength',
                                     label: '光の強さ',
                                     min: 1.5,
-                                    max: 7.0,
+                                    max: 7.5,
                                 },
                                 {
                                     key: 'period',
@@ -808,6 +788,27 @@ export default function OfViewer() {
                             ))}
                         </div>
                     ) : null}
+                </aside>
+
+                <aside
+                    id="drawing-background-panel"
+                    className="drawing-background-panel"
+                    aria-label="背景色"
+                    hidden={!backgroundPanelOpen}
+                >
+                    <strong>背景色</strong>
+
+                    <ColorPicker
+                        initialHsv={{
+                            hue: 0,
+                            saturation: 0,
+                            value: 1,
+                        }}
+                        onChange={(nextColor) => {
+                            setBackgroundColor(nextColor)
+                            sendBackgroundColor(nextColor)
+                        }}
+                    />
                 </aside>
 
                 <aside
