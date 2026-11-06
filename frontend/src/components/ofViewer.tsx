@@ -54,6 +54,27 @@ type PaintWindow = Window & {
     paintLayerState?: PaintLayerState
 }
 
+function BrushSizePreview({ size }: { size: number }) {
+    const radius = size * 25
+    const diameter = radius * 2
+
+    return (
+        <div
+            className="drawing-size-preview"
+            role="img"
+            aria-label={`ブラシ半径 ${radius.toFixed(2)} ピクセル`}
+        >
+            <div
+                className="drawing-size-preview-circle"
+                style={{
+                    width: diameter,
+                    height: diameter,
+                }}
+            />
+        </div>
+    )
+}
+
 export default function OfViewer() {
     const [backgroundColor, setBackgroundColor] = useState(0xffffff)
     const [backgroundPanelOpen, setBackgroundPanelOpen] = useState(false)
@@ -77,6 +98,8 @@ export default function OfViewer() {
     const [videoUrl, setVideoUrl] = useState<string | null>(null)
     const [isUploading, setIsUploading] = useState(false)
     const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
+
+    const [isSizeAdjusting, setIsSizeAdjusting] = useState(false)
 
     useEffect(() => {
         const timerId = window.setInterval(() => {
@@ -494,12 +517,33 @@ export default function OfViewer() {
                                 </span>
 
                                 <input
+                                    className="drawing-size-slider"
                                     type="range"
                                     min={0.05}
                                     max={1}
                                     step={0.01}
                                     value={isPen ? penSize : eraserSize}
                                     style={rangeStyle(isPen ? penSize : eraserSize, 0.05, 1)}
+                                    onPointerDown={(event) => {
+                                        if (!event.isPrimary || event.button !== 0) {
+                                            return
+                                        }
+
+                                        event.currentTarget.setPointerCapture(event.pointerId)
+                                        setIsSizeAdjusting(true)
+                                    }}
+                                    onPointerUp={() => {
+                                        setIsSizeAdjusting(false)
+                                    }}
+                                    onPointerCancel={() => {
+                                        setIsSizeAdjusting(false)
+                                    }}
+                                    onLostPointerCapture={() => {
+                                        setIsSizeAdjusting(false)
+                                    }}
+                                    onBlur={() => {
+                                        setIsSizeAdjusting(false)
+                                    }}
                                     onChange={(event) => {
                                         const value = event.currentTarget.valueAsNumber
                                         if (isPen) {
@@ -515,7 +559,7 @@ export default function OfViewer() {
 
                             <label className='drawing-field'>
                                 <span>
-                                    透明度
+                                    不透明度
                                     :{isPen ? penAlpha : eraserAlpha}
                                 </span>
                                 <input
@@ -538,6 +582,11 @@ export default function OfViewer() {
                                     }}
                                 />
                             </label>
+                            {isSizeAdjusting && (
+                                <BrushSizePreview
+                                    size={isPen ? penSize : eraserSize}
+                                />
+                            )}
                         </div>
 
                     </div>
@@ -706,14 +755,14 @@ export default function OfViewer() {
                                 {
                                     key: 'sigma',
                                     label: '光の広がり',
-                                    min: 1.2,
-                                    max: 4.8,
+                                    min: 0.1,
+                                    max: 5.0,
                                 },
                                 {
                                     key: 'strength',
                                     label: '光の強さ',
                                     min: 1.5,
-                                    max: 6.0,
+                                    max: 7.0,
                                 },
                                 {
                                     key: 'period',

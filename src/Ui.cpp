@@ -40,10 +40,10 @@ Ui::Ui(int mainWidth) {
 	deleteAll.setup("delete");
 	deleteAll.setSize(100, 30);
 	deleteAll.setPosition(mainWidth, 258 + 32 * 7);
-	glowSigma.setup("sigma", 2.4f, 1.2f, 4.8f);
+	glowSigma.setup("sigma", 2.5f, 0.1f, 5.0f);
 	glowSigma.setSize(256, 30);
 	glowSigma.setPosition(mainWidth, 606);
-	glowStrength.setup("glowStrength", 3.0f, 1.5f, 6.0f);
+	glowStrength.setup("glowStrength", 4.5f, 1.5f, 7.0f);
 	glowStrength.setSize(256, 30);
 	glowStrength.setPosition(mainWidth, 638);
 	glowPeriod.setup("period", 1.0f, 0.3f, 3.0f);
