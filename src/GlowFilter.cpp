@@ -217,8 +217,8 @@ float GlowFilter::getPeriod() const {
 }
 
 void GlowFilter::setParameters(float sigma, float strength, float period) {
-	sigma = std::clamp(sigma, 1.2f, 4.8f);
-	strength = std::clamp(strength, 1.5f, 6.0f);
+	sigma = std::clamp(sigma, 0.1f, 5.0f);
+	strength = std::clamp(strength, 1.5f, 7.0f);
 	period = std::clamp(period, 0.3f, 3.0f);
 
 	// ぼかし画像の作り直しが必要か調べる

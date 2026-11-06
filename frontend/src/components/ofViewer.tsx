@@ -515,7 +515,7 @@ export default function OfViewer() {
 
                             <label className='drawing-field'>
                                 <span>
-                                    透明度
+                                    不透明度
                                     :{isPen ? penAlpha : eraserAlpha}
                                 </span>
                                 <input
@@ -706,14 +706,14 @@ export default function OfViewer() {
                                 {
                                     key: 'sigma',
                                     label: '光の広がり',
-                                    min: 1.2,
-                                    max: 4.8,
+                                    min: 0.1,
+                                    max: 5.0,
                                 },
                                 {
                                     key: 'strength',
                                     label: '光の強さ',
                                     min: 1.5,
-                                    max: 6.0,
+                                    max: 7.0,
                                 },
                                 {
                                     key: 'period',
