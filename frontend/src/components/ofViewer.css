@@ -530,3 +530,65 @@
     line-height: 1.6;
     white-space: nowrap;
 }
+
+/* 説明書ボタンとBrushボタンの間隔 */
+.drawing-app .drawing-manual-button {
+    margin-right: 16px;
+}
+
+/* 説明書表示中の画面全体を覆う背景 */
+.drawing-manual-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.8);
+}
+
+/* 説明書の表示領域 */
+.drawing-manual-dialog {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* 説明書画像 */
+.drawing-manual-dialog img {
+    display: block;
+
+    width: auto;
+    height: auto;
+    max-width: calc(100vw - 48px);
+    max-height: calc(100vh - 48px);
+
+    object-fit: contain;
+}
+
+/* 太さスライダー操作中のタッチスクロールを防ぐ */
+.drawing-size-slider {
+    touch-action: none;
+}
+
+/* 不透明度スライダーの下に表示する太さ確認用の枠 */
+.drawing-size-preview {
+    width: 96px;
+    height: 96px;
+    margin: 12px auto 0;
+    border: 1px solid #aaa; /* 確認枠：灰色 */
+    background: #222; /* 確認枠の背景：暗い灰色 */
+
+    display: grid;
+    place-items: center;
+
+    pointer-events: none;
+}
+
+/* 実際のブラシ直径を示す円 */
+.drawing-size-preview-circle {
+    border-radius: 50%;
+    background: #fff; /* ブラシの大きさを示す円：白 */
+}

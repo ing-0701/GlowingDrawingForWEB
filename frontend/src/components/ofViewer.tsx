@@ -75,6 +75,11 @@ function BrushSizePreview({ size }: { size: number }) {
     )
 }
 
+function toDisplayValue(value: number, min: number, max: number): number {
+    const ratio = Math.max(0, Math.min(1, (value - min) / (max - min)))
+    return Math.round(1 + ratio * 99)
+}
+
 export default function OfViewer() {
     const [backgroundColor, setBackgroundColor] = useState(0xffffff)
     const [backgroundPanelOpen, setBackgroundPanelOpen] = useState(false)
@@ -100,6 +105,7 @@ export default function OfViewer() {
     const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
 
     const [isSizeAdjusting, setIsSizeAdjusting] = useState(false)
+    const [manualOpen, setManualOpen] = useState(false)
 
     useEffect(() => {
         const timerId = window.setInterval(() => {
@@ -384,6 +390,15 @@ export default function OfViewer() {
                 <div className='drawing-header-actions'>
                     <button
                         type="button"
+                        className="drawing-manual-button"
+                        aria-haspopup="dialog"
+                        onClick={() => setManualOpen(true)}
+                    >
+                        説明書
+                    </button>
+
+                    <button
+                        type="button"
                         aria-expanded={brushPanelOpen}
                         aria-controls="drawing-brush-panel"
                         onClick={() => setBrushPanelOpen((open) => !open)}
@@ -518,7 +533,7 @@ export default function OfViewer() {
                             <label className='drawing-field'>
                                 <span>
                                     太さ
-                                    :{isPen ? penSize : eraserSize}
+                                    :{toDisplayValue(isPen ? penSize : eraserSize, 0.05, 1)}
                                 </span>
 
                                 <input
@@ -565,7 +580,7 @@ export default function OfViewer() {
                             <label className='drawing-field'>
                                 <span>
                                     不透明度
-                                    :{isPen ? penAlpha : eraserAlpha}
+                                    :{toDisplayValue(isPen ? penAlpha : eraserAlpha, 0.01, 1)}
                                 </span>
                                 <input
                                     type="range"
@@ -762,7 +777,13 @@ export default function OfViewer() {
                                 >
                                     <span>
                                         {setting.label}:
-                                        {selectedGlow[setting.key].toFixed(2)}
+                                        {setting.key === 'period'
+                                        ? selectedGlow[setting.key].toFixed(2)
+                                        : toDisplayValue(
+                                            selectedGlow[setting.key],
+                                            setting.min,
+                                            setting.max,
+                                        )}
                                     </span>
 
                                     <input
@@ -892,6 +913,26 @@ export default function OfViewer() {
                     </p>
                 </div>
             </div>
+
+            {manualOpen && (
+                <div
+                    className="drawing-manual-overlay"
+                    onClick={() => setManualOpen(false)}
+                >
+                    <div
+                        className="drawing-manual-dialog"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="説明書"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <img
+                            src="/images/manual.png"
+                            alt="GlowingDrawingの説明書"
+                        />
+                    </div>
+                </div>
+            )}
         </section>
     )
 }
