@@ -220,6 +220,11 @@ export default function OfViewer() {
     const selectedGlow = selectedLayer?.glow
 
     async function saveVideo() {
+        if (import.meta.env.VITE_OFFLINE_DEMO === 'true') {
+            window.alert('この機能は現在利用できません')
+            return
+        }
+
         if (isRecording) return
 
         setIsRecording(true)
