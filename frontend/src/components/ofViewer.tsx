@@ -706,14 +706,14 @@ export default function OfViewer() {
                                 {
                                     key: 'sigma',
                                     label: '光の広がり',
-                                    min: 1.0,
-                                    max: 3.0,
+                                    min: 1.2,
+                                    max: 4.8,
                                 },
                                 {
                                     key: 'strength',
                                     label: '光の強さ',
-                                    min: 1.0,
-                                    max: 3.0,
+                                    min: 1.5,
+                                    max: 6.0,
                                 },
                                 {
                                     key: 'period',
