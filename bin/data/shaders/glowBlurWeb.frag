@@ -1,55 +1,58 @@
 #version 300 es
 
 precision highp float;
+precision highp int;
 
 uniform sampler2D sourceTexture;
+
 uniform vec2 direction;
 uniform vec2 imageSize;
 uniform float strength;
-uniform float sigma;    //sigmaが大きいほど広くぼける
+
+const int MAX_BLUR_RADIUS = 32;
+
+uniform int radius;
+uniform float weights[MAX_BLUR_RADIUS + 1];
 
 in vec2 textCoord;    //補間された後の、元画像の座標
 
 out vec4 outputColor;
 
+vec4 readSource(vec2 pixelPos) {
+    if (
+        pixelPos.x < 0.0 ||
+        pixelPos.x >= imageSize.x ||
+        pixelPos.y < 0.0 ||
+        pixelPos.y >= imageSize.y
+    ) {
+        return vec4(0.0);
+    }
+
+    return texture(sourceTexture, pixelPos / imageSize);
+}
+
 void main() {
+    // WebGLの0〜1の座標をテクセル単位にする
+    vec2 pixelPos = textCoord * imageSize;
 
-	vec4 totalColor = vec4(0.0);
-	float totalWeight = 0.0;
+	vec4 totalColor = readSource(pixelPos) * weights[0];
 
-	// WebGLのテクスチャは0〜1なので、テクセル単位に変換
-	vec2 pixelPos = textCoord * imageSize;
+    for (int i = 1; i <= MAX_BLUR_RADIUS; ++i) {
+        if (i > radius) {
+            break;
+        }
 
-	for (int i = -12; i <= 12; ++i){
-		float distance = float(i);
+        vec2 offset = direction * float(i);
 
-		float weight = exp(
-			-(distance * distance) / (2.0 * sigma * sigma)
-		);
-
-		vec2 samplePos = pixelPos + direction * distance;
-
-		vec4 sampleColor = vec4(0.0);
-
-		if(
-			samplePos.x >= 0.0 &&
-			samplePos.x < imageSize.x &&
-			samplePos.y >= 0.0 &&
-			samplePos.y < imageSize.y
-		){
-            // 読み取るときは0〜1の座標に戻す
-			sampleColor = texture(sourceTexture, samplePos / imageSize);
-		}
-
-		totalColor += sampleColor * weight;
-		totalWeight += weight;
-	}
-
-	vec4 blurredColor = totalColor / totalWeight;
+        totalColor += (
+            readSource(pixelPos - offset) +
+            readSource(pixelPos + offset)
+        ) * weights[i];
+    }
 
 	outputColor = vec4(
-		blurredColor.rgb * strength,
-		blurredColor.a
+		totalColor.rgb * strength,
+		totalColor.a
 	);
 }
 

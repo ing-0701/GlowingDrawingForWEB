@@ -281,6 +281,14 @@
     <None Include="bin\data\shaders\glowBlur.vert" />
     <None Include="bin\data\shaders\glowBlurWeb.frag" />
     <None Include="bin\data\shaders\glowBlurWeb.vert" />
+    <None Include="bin\data\shaders\glowComposite.frag" />
+    <None Include="bin\data\shaders\glowComposite.vert" />
+    <None Include="bin\data\shaders\glowCompositeWeb.frag" />
+    <None Include="bin\data\shaders\glowCompositeWeb.vert" />
+    <None Include="bin\data\shaders\glowDownsample.frag" />
+    <None Include="bin\data\shaders\glowDownsample.vert" />
+    <None Include="bin\data\shaders\glowDownsampleWeb.frag" />
+    <None Include="bin\data\shaders\glowDownsampleWeb.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ProjectExtensions>

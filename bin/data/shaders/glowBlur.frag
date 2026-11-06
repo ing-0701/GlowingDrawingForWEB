@@ -2,47 +2,56 @@
 #extension GL_ARB_texture_rectangle : enable
 
 uniform sampler2DRect sourceTexture;
+
 uniform vec2 direction;
 uniform vec2 imageSize;
 uniform float strength;
-uniform float sigma;    //sigmaが大きいほど広くぼける
+
+const int MAX_BLUR_RADIUS = 32;
+
+uniform int radius;
+uniform float weights[MAX_BLUR_RADIUS + 1];
 
 varying vec2 textCoord;    //補間された後の、元画像の座標
 
+// 画像の外側は透明な黒として読む
+// 境界付近でも重みの再正規化はしない
+vec4 readSource(vec2 pixelPos){
+    if (
+        pixelPos.x < 0.0 ||
+        pixelPos.x >= imageSize.x ||
+        pixelPos.y < 0.0 ||
+        pixelPos.y >= imageSize.y
+    ) {
+        return vec4(0.0);
+    }
+
+	return texture2DRect(sourceTexture, pixelPos);
+}
+
 void main() {
+	vec2 pixelPos = textCoord;
 
-	vec4 totalColor = vec4(0.0);
-	float totalWeight = 0.0;
+	// 中心のテクセル
+	vec4 totalColor = readSource(pixelPos) * weights[0];
 
-	for (int i = -12; i <= 12; ++i){
-		float distance = float(i);
-
-		float weight = exp(
-			-(distance * distance) / (2.0 * sigma * sigma)
-		);
-
-		vec2 samplePos = textCoord + direction * distance;
-
-		vec4 sampleColor = vec4(0.0);
-
-		if(
-			samplePos.x >= 0.0 &&
-			samplePos.x < imageSize.x &&
-			samplePos.y >= 0.0 &&
-			samplePos.y < imageSize.y
-		){
-			sampleColor = texture2DRect(sourceTexture, samplePos);
+	for(int i = 1; i <= MAX_BLUR_RADIUS; i++){
+		if (i > radius){
+			break;
 		}
 
-		totalColor += sampleColor * weight;
-		totalWeight += weight;
+		vec2 offset = direction * float(i);
+
+		totalColor += (
+            readSource(pixelPos - offset) +
+            readSource(pixelPos + offset)
+        ) * weights[i];
 	}
 
-	vec4 blurredColor = totalColor / totalWeight;
-
+    // weightsはC++側で正規化済み
 	gl_FragColor = vec4(
-		blurredColor.rgb * strength,
-		blurredColor.a
+		totalColor.rgb * strength,
+		totalColor.a
 	);
 }
 
