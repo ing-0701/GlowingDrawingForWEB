@@ -1,0 +1,361 @@
+#version 120
+#extension GL_ARB_texture_rectangle : enable
+
+uniform sampler2DRect sourceTexture;
+
+uniform vec2 direction;
+uniform vec2 imageSize;
+uniform float strength;
+
+const int MAX_BLUR_RADIUS = 32;
+
+uniform int radius;
+uniform float weights[MAX_BLUR_RADIUS + 1];
+
+varying vec2 textCoord;    //補間された後の、元画像の座標
+
+// 画像の外側は透明な黒として読む
+// 境界付近でも重みの再正規化はしない
+vec4 readSource(vec2 pixelPos){
+    if (
+        pixelPos.x < 0.0 ||
+        pixelPos.x >= imageSize.x ||
+        pixelPos.y < 0.0 ||
+        pixelPos.y >= imageSize.y
+    ) {
+        return vec4(0.0);
+    }
+
+	return texture2DRect(sourceTexture, pixelPos);
+}
+
+void main() {
+	vec2 pixelPos = textCoord;
+
+	// 中心のテクセル
+	vec4 totalColor = readSource(pixelPos) * weights[0];
+
+	for(int i = 1; i <= MAX_BLUR_RADIUS; i++){
+		if (i > radius){
+			break;
+		}
+
+		vec2 offset = direction * float(i);
+
+		totalColor += (
+            readSource(pixelPos - offset) +
+            readSource(pixelPos + offset)
+        ) * weights[i];
+	}
+
+    // weightsはC++側で正規化済み
+	gl_FragColor = vec4(
+		totalColor.rgb * strength,
+		totalColor.a
+	);
+}
+
+/*
+ガウシアンフィルタによるぼかし。
+
+各フラグメントについて、対応するテクスチャ座標を中心に、
+前後12テクセル、合計25か所の色を読む。
+
+各色には、中心に近いほど大きく、遠いほど小さい重みを付ける。
+重みは次の式で求める。
+
+    weight = exp(-distance² / (2 × sigma²))
+
+sigmaは重みの広がりを表す値。今回は4.0。
+大きくすると遠いテクセルの影響が強くなるが、
+参照範囲の±12は自動では変わらない。
+
+「色 × 重み」を合計し、重みの合計で割って、
+各画素でぼかしたRGBAを求める。画像の外側は透明な黒として扱う。
+
+directionが(1, 0)なら横方向、(0, 1)なら縦方向をぼかす。
+C++側で「元画像 → 横ぼかし → 縦ぼかし」と2回適用することで、
+縦横に広がるぼかしを、少ない参照回数で作る。
+
+最後にRGBだけをstrength倍し、発光の強さを調整する。
+元画像への加算合成は、このシェーダーではなくC++側で行う。
+*/
+#version 120
+
+varying vec2 textCoord;
+
+void main() {
+	gl_Position = ftransform();    //描画する図形の頂点の位置(今回は4つ)
+	textCoord = gl_MultiTexCoord0.xy;    //元画像のどの部分か
+}
+
+
+// oFでシェーダーを有効化し、画像を描く命令を出す。位置とテクスチャが渡される。
+// oFからの命令は、ofShader.begin後のFbo.drawなど。
+// ftransformによってoFの座標系からシェーダー用の座標系に変換された位置情報がgl_Positionに入る。
+// textCoordにoFの命令をもとにしたテクスチャ座標が与えられる(この時点では4つ)。
+// 頂点シェーダーからフラグメントシェーダーにtextCoordを渡す際、varyingという宣言に従い、GPUがtextCoordを補完する。
+#version 300 es
+
+precision highp float;
+precision highp int;
+
+uniform sampler2D sourceTexture;
+
+uniform vec2 direction;
+uniform vec2 imageSize;
+uniform float strength;
+
+const int MAX_BLUR_RADIUS = 32;
+
+uniform int radius;
+uniform float weights[MAX_BLUR_RADIUS + 1];
+
+in vec2 textCoord;    //補間された後の、元画像の座標
+
+out vec4 outputColor;
+
+vec4 readSource(vec2 pixelPos) {
+    if (
+        pixelPos.x < 0.0 ||
+        pixelPos.x >= imageSize.x ||
+        pixelPos.y < 0.0 ||
+        pixelPos.y >= imageSize.y
+    ) {
+        return vec4(0.0);
+    }
+
+    return texture(sourceTexture, pixelPos / imageSize);
+}
+
+void main() {
+    // WebGLの0〜1の座標をテクセル単位にする
+    vec2 pixelPos = textCoord * imageSize;
+
+	vec4 totalColor = readSource(pixelPos) * weights[0];
+
+    for (int i = 1; i <= MAX_BLUR_RADIUS; ++i) {
+        if (i > radius) {
+            break;
+        }
+
+        vec2 offset = direction * float(i);
+
+        totalColor += (
+            readSource(pixelPos - offset) +
+            readSource(pixelPos + offset)
+        ) * weights[i];
+    }
+
+	outputColor = vec4(
+		totalColor.rgb * strength,
+		totalColor.a
+	);
+}
+
+/*
+ガウシアンフィルタによるぼかし。
+
+各フラグメントについて、対応するテクスチャ座標を中心に、
+前後12テクセル、合計25か所の色を読む。
+
+各色には、中心に近いほど大きく、遠いほど小さい重みを付ける。
+重みは次の式で求める。
+
+    weight = exp(-distance² / (2 × sigma²))
+
+sigmaは重みの広がりを表す値。今回は4.0。
+大きくすると遠いテクセルの影響が強くなるが、
+参照範囲の±12は自動では変わらない。
+
+「色 × 重み」を合計し、重みの合計で割って、
+各画素でぼかしたRGBAを求める。画像の外側は透明な黒として扱う。
+
+directionが(1, 0)なら横方向、(0, 1)なら縦方向をぼかす。
+C++側で「元画像 → 横ぼかし → 縦ぼかし」と2回適用することで、
+縦横に広がるぼかしを、少ない参照回数で作る。
+
+最後にRGBだけをstrength倍し、発光の強さを調整する。
+元画像への加算合成は、このシェーダーではなくC++側で行う。
+*/
+#version 300 es
+
+precision highp float;
+
+uniform mat4 modelViewProjectionMatrix;
+
+in vec4 position;
+in vec2 texcoord;
+
+out vec2 textCoord;
+
+void main(){
+	gl_Position = modelViewProjectionMatrix * position;
+	textCoord = texcoord;
+}
+
+// oFでシェーダーを有効化し、画像を描く命令を出す。位置とテクスチャが渡される。
+// oFからの命令は、ofShader.begin後のFbo.drawなど。
+// ftransformによってoFの座標系からシェーダー用の座標系に変換された位置情報がgl_Positionに入る。
+// textCoordにoFの命令をもとにしたテクスチャ座標が与えられる(この時点では4つ)。
+// 頂点シェーダーからフラグメントシェーダーにtextCoordを渡す際、varyingという宣言に従い、GPUがtextCoordを補完する。
+#version 120
+
+varying vec2 textCoord;
+
+void main() {
+	gl_Position = ftransform();    //描画する図形の頂点の位置(今回は4つ)
+	textCoord = gl_MultiTexCoord0.xy;    //元画像のどの部分か
+}
+
+
+// oFでシェーダーを有効化し、画像を描く命令を出す。位置とテクスチャが渡される。
+// oFからの命令は、ofShader.begin後のFbo.drawなど。
+// ftransformによってoFの座標系からシェーダー用の座標系に変換された位置情報がgl_Positionに入る。
+// textCoordにoFの命令をもとにしたテクスチャ座標が与えられる(この時点では4つ)。
+// 頂点シェーダーからフラグメントシェーダーにtextCoordを渡す際、varyingという宣言に従い、GPUがtextCoordを補完する。
+#version 300 es
+
+precision highp float;
+
+uniform mat4 modelViewProjectionMatrix;
+
+in vec4 position;
+in vec2 texcoord;
+
+out vec2 textCoord;
+
+void main(){
+	gl_Position = modelViewProjectionMatrix * position;
+	textCoord = texcoord;
+}
+
+// oFでシェーダーを有効化し、画像を描く命令を出す。位置とテクスチャが渡される。
+// oFからの命令は、ofShader.begin後のFbo.drawなど。
+// ftransformによってoFの座標系からシェーダー用の座標系に変換された位置情報がgl_Positionに入る。
+// textCoordにoFの命令をもとにしたテクスチャ座標が与えられる(この時点では4つ)。
+// 頂点シェーダーからフラグメントシェーダーにtextCoordを渡す際、varyingという宣言に従い、GPUがtextCoordを補完する。
+#version 120
+#extension GL_ARB_texture_rectangle : enable
+
+uniform sampler2DRect sourceTexture;
+
+varying vec2 textCoord;
+
+void main (){
+	// 出力先の1ピクセルに対応する、元画像の中心位置
+	vec2 center = textCoord;
+
+	// 元画像の2×2テクセルの中心を読む
+	vec4 topLeft = texture2DRect(
+		sourceTexture,
+		center + vec2(-0.5, -0.5)
+	);
+
+	    vec4 topRight = texture2DRect(
+        sourceTexture,
+        center + vec2(0.5, -0.5)
+    );
+
+    vec4 bottomLeft = texture2DRect(
+        sourceTexture,
+        center + vec2(-0.5, 0.5)
+    );
+
+    vec4 bottomRight = texture2DRect(
+        sourceTexture,
+        center + vec2(0.5, 0.5)
+    );
+
+    // RGBAすべてについて、4テクセルの平均を求める
+	gl_FragColor = (
+        topLeft +
+        topRight +
+        bottomLeft +
+        bottomRight
+    ) * 0.25;
+}
+#version 120
+
+varying vec2 textCoord;
+
+void main() {
+	gl_Position = ftransform();    //描画する図形の頂点の位置(今回は4つ)
+	textCoord = gl_MultiTexCoord0.xy;    //元画像のどの部分か
+}
+
+
+// oFでシェーダーを有効化し、画像を描く命令を出す。位置とテクスチャが渡される。
+// oFからの命令は、ofShader.begin後のFbo.drawなど。
+// ftransformによってoFの座標系からシェーダー用の座標系に変換された位置情報がgl_Positionに入る。
+// textCoordにoFの命令をもとにしたテクスチャ座標が与えられる(この時点では4つ)。
+// 頂点シェーダーからフラグメントシェーダーにtextCoordを渡す際、varyingという宣言に従い、GPUがtextCoordを補完する。
+#version 300 es
+
+precision highp float;
+
+uniform sampler2D sourceTexture;
+
+// 縮小元の画像サイズ
+uniform vec2 imageSize;
+
+in vec2 textCoord;
+
+out vec4 outputColor;
+
+void main() {
+    // Web版では座標が0〜1なので、
+    // 半テクセル分を、その座標系に変換する
+    vec2 halfTexel = vec2(0.5) / imageSize;
+
+    vec4 topLeft = texture(
+        sourceTexture,
+        textCoord + vec2(-halfTexel.x, -halfTexel.y)
+    );
+
+    vec4 topRight = texture(
+        sourceTexture,
+        textCoord + vec2(halfTexel.x, -halfTexel.y)
+    );
+
+    vec4 bottomLeft = texture(
+        sourceTexture,
+        textCoord + vec2(-halfTexel.x, halfTexel.y)
+    );
+
+    vec4 bottomRight = texture(
+        sourceTexture,
+        textCoord + vec2(halfTexel.x, halfTexel.y)
+    );
+
+    outputColor = (
+        topLeft +
+        topRight +
+        bottomLeft +
+        bottomRight
+    ) * 0.25;
+}
+#version 300 es
+
+precision highp float;
+
+uniform mat4 modelViewProjectionMatrix;
+
+in vec4 position;
+in vec2 texcoord;
+
+out vec2 textCoord;
+
+void main(){
+	gl_Position = modelViewProjectionMatrix * position;
+	textCoord = texcoord;
+}
+
+// oFでシェーダーを有効化し、画像を描く命令を出す。位置とテクスチャが渡される。
+// oFからの命令は、ofShader.begin後のFbo.drawなど。
+// ftransformによってoFの座標系からシェーダー用の座標系に変換された位置情報がgl_Positionに入る。
+// textCoordにoFの命令をもとにしたテクスチャ座標が与えられる(この時点では4つ)。
+// 頂点シェーダーからフラグメントシェーダーにtextCoordを渡す際、varyingという宣言に従い、GPUがtextCoordを補完する。
+�PNG
+
+   IHDR  �  �   �(-   	pHYs     ��  IDATx���1 0��Mf�4�a#ț;3s   �Uo;    0�   �`�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ��  @�A  � �      :   t   0�   `�   ���=s    IEND�B`�
