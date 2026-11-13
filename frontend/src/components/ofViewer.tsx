@@ -54,7 +54,13 @@ type PaintWindow = Window & {
     paintLayerState?: PaintLayerState
 }
 
-function BrushSizePreview({ size }: { size: number }) {
+function BrushSizePreview({ 
+        size,
+        alpha,
+     }: { 
+        size: number
+        alpha: number
+     }) {
     const radius = size * 25
     const diameter = radius * 2
 
@@ -62,13 +68,14 @@ function BrushSizePreview({ size }: { size: number }) {
         <div
             className="drawing-size-preview"
             role="img"
-            aria-label={`ブラシ半径 ${radius.toFixed(2)} ピクセル`}
+            aria-label={`ブラシ半径 ${radius.toFixed(2)} ピクセル、不透明度 ${Math.round(alpha * 100)}%`}
         >
             <div
                 className="drawing-size-preview-circle"
                 style={{
                     width: diameter,
                     height: diameter,
+                    opacity: alpha,
                 }}
             />
         </div>
@@ -104,7 +111,6 @@ export default function OfViewer() {
     const [isUploading, setIsUploading] = useState(false)
     const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
 
-    const [isSizeAdjusting, setIsSizeAdjusting] = useState(false)
     const [manualOpen, setManualOpen] = useState(false)
 
     useEffect(() => {
@@ -544,26 +550,6 @@ export default function OfViewer() {
                                     step={0.01}
                                     value={isPen ? penSize : eraserSize}
                                     style={rangeStyle(isPen ? penSize : eraserSize, 0.05, 1)}
-                                    onPointerDown={(event) => {
-                                        if (!event.isPrimary || event.button !== 0) {
-                                            return
-                                        }
-
-                                        event.currentTarget.setPointerCapture(event.pointerId)
-                                        setIsSizeAdjusting(true)
-                                    }}
-                                    onPointerUp={() => {
-                                        setIsSizeAdjusting(false)
-                                    }}
-                                    onPointerCancel={() => {
-                                        setIsSizeAdjusting(false)
-                                    }}
-                                    onLostPointerCapture={() => {
-                                        setIsSizeAdjusting(false)
-                                    }}
-                                    onBlur={() => {
-                                        setIsSizeAdjusting(false)
-                                    }}
                                     onChange={(event) => {
                                         const value = event.currentTarget.valueAsNumber
                                         if (isPen) {
@@ -602,11 +588,10 @@ export default function OfViewer() {
                                     }}
                                 />
                             </label>
-                            {isSizeAdjusting && (
-                                <BrushSizePreview
-                                    size={isPen ? penSize : eraserSize}
-                                />
-                            )}
+                            <BrushSizePreview
+                                size={isPen ? penSize : eraserSize}
+                                alpha={isPen ? penAlpha : eraserAlpha}
+                            />
                         </div>
 
                     </div>
