@@ -1,0 +1,10 @@
+http://127.0.0.1:8765 {
+    root * ./dist
+
+    header {
+        Cross-Origin-Opener-Policy "same-origin"
+        Cross-Origin-Embedder-Policy "require-corp"
+    }
+
+    file_server
+}

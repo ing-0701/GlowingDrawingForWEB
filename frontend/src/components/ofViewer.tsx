@@ -54,7 +54,13 @@ type PaintWindow = Window & {
     paintLayerState?: PaintLayerState
 }
 
-function BrushSizePreview({ size }: { size: number }) {
+function BrushSizePreview({ 
+        size,
+        alpha,
+     }: { 
+        size: number
+        alpha: number
+     }) {
     const radius = size * 25
     const diameter = radius * 2
 
@@ -62,17 +68,23 @@ function BrushSizePreview({ size }: { size: number }) {
         <div
             className="drawing-size-preview"
             role="img"
-            aria-label={`ブラシ半径 ${radius.toFixed(2)} ピクセル`}
+            aria-label={`ブラシ半径 ${radius.toFixed(2)} ピクセル、不透明度 ${Math.round(alpha * 100)}%`}
         >
             <div
                 className="drawing-size-preview-circle"
                 style={{
                     width: diameter,
                     height: diameter,
+                    opacity: alpha,
                 }}
             />
         </div>
     )
+}
+
+function toDisplayValue(value: number, min: number, max: number): number {
+    const ratio = Math.max(0, Math.min(1, (value - min) / (max - min)))
+    return Math.round(1 + ratio * 99)
 }
 
 export default function OfViewer() {
@@ -99,7 +111,7 @@ export default function OfViewer() {
     const [isUploading, setIsUploading] = useState(false)
     const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
 
-    const [isSizeAdjusting, setIsSizeAdjusting] = useState(false)
+    const [manualOpen, setManualOpen] = useState(false)
 
     useEffect(() => {
         const timerId = window.setInterval(() => {
@@ -243,6 +255,11 @@ export default function OfViewer() {
     const selectedGlow = selectedLayer?.glow
 
     async function saveVideo() {
+        if (import.meta.env.VITE_OFFLINE_DEMO === 'true') {
+            window.alert('この機能は現在利用できません')
+            return
+        }
+
         if (isRecording) return
 
         setIsRecording(true)
@@ -379,6 +396,15 @@ export default function OfViewer() {
                 <div className='drawing-header-actions'>
                     <button
                         type="button"
+                        className="drawing-manual-button"
+                        aria-haspopup="dialog"
+                        onClick={() => setManualOpen(true)}
+                    >
+                        説明書
+                    </button>
+
+                    <button
+                        type="button"
                         aria-expanded={brushPanelOpen}
                         aria-controls="drawing-brush-panel"
                         onClick={() => setBrushPanelOpen((open) => !open)}
@@ -388,20 +414,20 @@ export default function OfViewer() {
 
                     <button
                         type="button"
-                        aria-expanded={backgroundPanelOpen}
-                        aria-controls="drawing-background-panel"
-                        onClick={() => setBackgroundPanelOpen((open) => !open)}
-                    >
-                        Background
-                    </button>
-
-                    <button
-                        type="button"
                         aria-expanded={layerPanelOpen}
                         aria-controls="drawing-layer-panel"
                         onClick={() => setLayerPanelOpen((open) => !open)}
                     >
                         Layer
+                    </button>
+
+                    <button
+                        type="button"
+                        aria-expanded={backgroundPanelOpen}
+                        aria-controls="drawing-background-panel"
+                        onClick={() => setBackgroundPanelOpen((open) => !open)}
+                    >
+                        Background
                     </button>
 
                     <button
@@ -513,7 +539,7 @@ export default function OfViewer() {
                             <label className='drawing-field'>
                                 <span>
                                     太さ
-                                    :{isPen ? penSize : eraserSize}
+                                    :{toDisplayValue(isPen ? penSize : eraserSize, 0.05, 1)}
                                 </span>
 
                                 <input
@@ -524,26 +550,6 @@ export default function OfViewer() {
                                     step={0.01}
                                     value={isPen ? penSize : eraserSize}
                                     style={rangeStyle(isPen ? penSize : eraserSize, 0.05, 1)}
-                                    onPointerDown={(event) => {
-                                        if (!event.isPrimary || event.button !== 0) {
-                                            return
-                                        }
-
-                                        event.currentTarget.setPointerCapture(event.pointerId)
-                                        setIsSizeAdjusting(true)
-                                    }}
-                                    onPointerUp={() => {
-                                        setIsSizeAdjusting(false)
-                                    }}
-                                    onPointerCancel={() => {
-                                        setIsSizeAdjusting(false)
-                                    }}
-                                    onLostPointerCapture={() => {
-                                        setIsSizeAdjusting(false)
-                                    }}
-                                    onBlur={() => {
-                                        setIsSizeAdjusting(false)
-                                    }}
                                     onChange={(event) => {
                                         const value = event.currentTarget.valueAsNumber
                                         if (isPen) {
@@ -560,7 +566,7 @@ export default function OfViewer() {
                             <label className='drawing-field'>
                                 <span>
                                     不透明度
-                                    :{isPen ? penAlpha : eraserAlpha}
+                                    :{toDisplayValue(isPen ? penAlpha : eraserAlpha, 0.01, 1)}
                                 </span>
                                 <input
                                     type="range"
@@ -582,34 +588,13 @@ export default function OfViewer() {
                                     }}
                                 />
                             </label>
-                            {isSizeAdjusting && (
-                                <BrushSizePreview
-                                    size={isPen ? penSize : eraserSize}
-                                />
-                            )}
+                            <BrushSizePreview
+                                size={isPen ? penSize : eraserSize}
+                                alpha={isPen ? penAlpha : eraserAlpha}
+                            />
                         </div>
 
                     </div>
-                </aside>
-                <aside
-                    id="drawing-background-panel"
-                    className="drawing-background-panel"
-                    aria-label="背景色"
-                    hidden={!backgroundPanelOpen}
-                >
-                    <strong>背景色</strong>
-
-                    <ColorPicker
-                        initialHsv={{
-                            hue: 0,
-                            saturation: 0,
-                            value: 1,
-                        }}
-                        onChange={(nextColor) => {
-                            setBackgroundColor(nextColor)
-                            sendBackgroundColor(nextColor)
-                        }}
-                    />
                 </aside>
                 <aside
                     id="drawing-layer-panel"
@@ -755,14 +740,14 @@ export default function OfViewer() {
                                 {
                                     key: 'sigma',
                                     label: '光の広がり',
-                                    min: 0.1,
-                                    max: 5.0,
+                                    min: 1.0,
+                                    max: 4.0,
                                 },
                                 {
                                     key: 'strength',
                                     label: '光の強さ',
                                     min: 1.5,
-                                    max: 7.0,
+                                    max: 7.5,
                                 },
                                 {
                                     key: 'period',
@@ -777,7 +762,13 @@ export default function OfViewer() {
                                 >
                                     <span>
                                         {setting.label}:
-                                        {selectedGlow[setting.key].toFixed(2)}
+                                        {setting.key === 'period'
+                                        ? selectedGlow[setting.key].toFixed(2)
+                                        : toDisplayValue(
+                                            selectedGlow[setting.key],
+                                            setting.min,
+                                            setting.max,
+                                        )}
                                     </span>
 
                                     <input
@@ -803,6 +794,27 @@ export default function OfViewer() {
                             ))}
                         </div>
                     ) : null}
+                </aside>
+
+                <aside
+                    id="drawing-background-panel"
+                    className="drawing-background-panel"
+                    aria-label="背景色"
+                    hidden={!backgroundPanelOpen}
+                >
+                    <strong>背景色</strong>
+
+                    <ColorPicker
+                        initialHsv={{
+                            hue: 0,
+                            saturation: 0,
+                            value: 1,
+                        }}
+                        onChange={(nextColor) => {
+                            setBackgroundColor(nextColor)
+                            sendBackgroundColor(nextColor)
+                        }}
+                    />
                 </aside>
 
                 <aside
@@ -849,8 +861,64 @@ export default function OfViewer() {
                             />
                         </>
                     )}
+
                 </aside>
             </div>
+
+            {/* アプリ公開・アンケート・SNSの案内 */}
+            <div className="drawing-info-panels">
+                <div className="drawing-info-panel">
+                    <p>
+                        改善＆機能追加をして<br />
+                        WEBアプリとしての公開を<br />
+                        計画しています！
+                    </p>
+                </div>
+
+                <div className="drawing-info-panel">
+                    <img
+                        src="/images/qrcode_forms.png"
+                        alt="ご意見・ご感想フォームのQRコード"
+                    />
+                    <p>
+                        ◀ご意見＆ご感想<br />
+                        ㅤ是非お気軽に！
+                    </p>
+                </div>
+
+                <div className="drawing-info-panel">
+                    <img
+                        src="/images/qrcode_x.png"
+                        alt="XアカウントのQRコード"
+                    />
+                    <p>
+                        ◀リリースは<br />
+                        ㅤこちらのアカウントから<br />
+                        ㅤご報告します！
+                    </p>
+                </div>
+            </div>
+
+            {manualOpen && (
+                <div
+                    className="drawing-manual-overlay"
+                    onClick={() => setManualOpen(false)}
+                >
+                    <div
+                        className="drawing-manual-dialog"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="説明書"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <img
+                            src="/images/manual.png"
+                            alt="GlowingDrawingの説明書"
+                        />
+                    </div>
+                </div>
+            )}
         </section>
     )
 }
+

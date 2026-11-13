@@ -487,18 +487,99 @@
     display: none;
 }
 
-/* 太さスライダーの操作中は、指の動きをページスクロールに使わない */
+
+/* アプリ下部の案内パネル3つを横並びにする */
+.drawing-info-panels {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+
+    width: 902px;
+    margin-top: 12px;
+}
+
+/* 各案内パネル */
+.drawing-info-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+
+    min-width: 0;
+    min-height: 120px;
+    padding: 12px;
+
+    border: 1px solid #fff;
+    background: var(--panel-bg);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+}
+
+/* QRコード画像 */
+.drawing-info-panel img {
+    display: block;
+    width: 84px;
+    height: 84px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+/* 案内文 */
+.drawing-info-panel p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: nowrap;
+}
+
+/* 説明書ボタンとBrushボタンの間隔 */
+.drawing-app .drawing-manual-button {
+    margin-right: 16px;
+}
+
+/* 説明書表示中の画面全体を覆う背景 */
+.drawing-manual-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.8);
+}
+
+/* 説明書の表示領域 */
+.drawing-manual-dialog {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* 説明書画像 */
+.drawing-manual-dialog img {
+    display: block;
+
+    width: auto;
+    height: auto;
+    max-width: calc(100vw - 48px);
+    max-height: calc(100vh - 48px);
+
+    object-fit: contain;
+}
+
+/* 太さスライダー操作中のタッチスクロールを防ぐ */
 .drawing-size-slider {
     touch-action: none;
 }
 
-/* 太さ確認用の正方形 */
+/* 不透明度スライダーの下に表示する太さ確認用の枠 */
 .drawing-size-preview {
     width: 96px;
     height: 96px;
     margin: 12px auto 0;
-    border: 1px solid #aaa;
-    background: #222;
+    border: 1px solid #aaa; /* 確認枠：灰色 */
+    background: #222; /* 確認枠の背景：暗い灰色 */
 
     display: grid;
     place-items: center;
@@ -506,8 +587,8 @@
     pointer-events: none;
 }
 
-/* 実際のブラシ直径に合わせる円 */
+/* 実際のブラシ直径を示す円 */
 .drawing-size-preview-circle {
     border-radius: 50%;
-    background: #fff;
+    background: #fff; /* ブラシの大きさを示す円：白 */
 }
