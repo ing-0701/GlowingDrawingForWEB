@@ -159,8 +159,9 @@ ofRectangle Ui::getLayerRowRect(int visibleRow) const {
 }
 
 void Ui::drawLayerPanel(
-	const std::vector<std::unique_ptr<Layer>> & layers,
-	int selectedLayerId) {
+	const std::vector<std::unique_ptr<paintcore::Layer>> & layers,
+	int selectedLayerId,
+	const std::function<LayerType(int)> & getLayerType) {
 	const int maxFirst = std::max(
 		0,
 		static_cast<int>(layers.size()) - visibleLayerCount);
@@ -216,7 +217,7 @@ void Ui::drawLayerPanel(
 				break;
 			}
 
-			const Layer & layer = *layers[index];
+			const paintcore::Layer & layer = *layers[index];
 			const ofRectangle rect = getLayerRowRect(row);
 
 			// 選択中の行を強調
@@ -236,7 +237,7 @@ void Ui::drawLayerPanel(
 				rect.x + 8,
 				rect.y + 17);
 
-			const std::string typeName = layer.filter->getType() == LayerType::Normal
+			const std::string typeName = getLayerType(layer.id) == LayerType::Normal
 				? "NormalLayer"
 				: "GlowLayer";
 
@@ -272,7 +273,7 @@ void Ui::drawLayerPanel(
 LayerUiAction Ui::pressLayerPanel(
 	int x,
 	int y,
-	const std::vector<std::unique_ptr<Layer>> & layers) {
+	const std::vector<std::unique_ptr<paintcore::Layer>> & layers) {
 	LayerUiAction action;
 
 	// 新しいクリックの開始時にリセットする

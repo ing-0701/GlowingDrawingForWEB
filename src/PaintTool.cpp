@@ -1,7 +1,9 @@
-#include "PaintTool.h"
 #include <cmath>
 #include <utility>
 #include <stdexcept>
+
+#include "PaintTool.h"
+#include "CanvasRenderer.h"
 
 PaintTool::PaintTool(int mainWidth, int mainHeight) {
 	canvasWidth = mainWidth;
@@ -19,345 +21,177 @@ PaintTool::PaintTool(int mainWidth, int mainHeight) {
 #endif // __EMSCRIPTEN__
 
 
-	preFbo2D.allocate(s);
-	strokeCheckpointFbo.allocate(s);
+	engine.allocateStrokeBuffers(s);
 	historySwapFbo.allocate(s);
 
-	for (int i = 0; i < UNDO_CAPACITY; i++) {
-		history[i].image.allocate(s);
-	}
+	historyManager.initializeEntries([&s](HistoryEntry& entry) {
+		entry.image.allocate(s);
+	});
+	
 }
 
 void PaintTool::beginStroke(const glm::vec2 & position) {
 	strokeLayerId = selectedLayerId;
-
-	points.clear();
-	strokePointStartIndex = 0;
-
-	// 曲線計算と距離計測の開始位置
-	previousInputPoint = position;
-	curveStartPoint = position;
-	previousPathSample = position;
-	distanceSinceStamp = 0.0f;
-
-	// 押した場所には、最初の円を1つ置く
-	points.push_back(position);
-
-	Layer & layer = getLayer(strokeLayerId);
-
-	// 今回の一筆を描くための土台
-	copyFbo(layer.canvas, strokeCheckpointFbo);
-}
-
-void PaintTool::appendPathSample(const glm::vec2 & position) {
-	constexpr float spacing = 3.0f;
-
-	const glm::vec2 delta = position - previousPathSample;
-	const float length = glm::length(delta);
-
-	if (length <= 0.0001f) {
-		return;
-	}
-
-	const glm::vec2 direction = delta / length;
-
-	// この小区間の始点から、次の円を置く位置までの距離
-	float nextDistance = spacing - distanceSinceStamp;
-	// distanceSinceStampは3pxを超えるまでこれまでの距離が蓄積する
-	// 例えば過去の三回のステップがそれぞれ0.7px, 0.8px, 0.8px だったならdistanceSinceStampは2.3
-
-	while (nextDistance <= length) {
-		points.push_back(
-			previousPathSample + direction * nextDistance);
-
-		nextDistance += spacing;
-	}
-
-	// 次の小区間へ持ち越す距離
-	distanceSinceStamp = length - (nextDistance - spacing);
-	previousPathSample = position;
-}
-
-void PaintTool::appendQuadratic(
-	const glm::vec2 & start,
-	const glm::vec2 & control,
-	const glm::vec2 & end) {
-
-	const float firstLength = glm::distance(start, control);
-	const float secondLength = glm::distance(control, end);
-
-	// 視点→制御点と、制御点→終点の二本のうち長いほう
-	const float longestLength = firstLength > secondLength ? firstLength : secondLength;
-
-	// ベジェ曲線の式の定義上、t=0からt=1間のどの場所でも速度は2*longestLengthを超えない
-	// 曲線の長さは曲線の速度をt=0~1で積分したら求められる
-	// その結果長さの上限が2*longestLengthだと求められる
-	// よって、曲線の移動ステップを2*longestLengthにすれば、一度のステップでの移動量が1を超えることはない
-	// 曲線を約1px以下の小区間に分けてたどる
-	int steps = static_cast<int>(
-		std::ceil(2.0f * longestLength));
-
-	if (steps < 1) {
-		steps = 1;
-	}
-
-	for (int i = 1; i <= steps; ++i) {
-		const float t = static_cast<float>(i) / static_cast<float>(steps);
-
-		const float u = 1.0f - t;
-
-		// ベジェ曲線の式に基づいたステップごとの点の位置の計算
-		const glm::vec2 position = u * u * start
-			+ 2.0f * u * t * control
-			+ t * t * end;
-
-		// 曲線に沿った距離が3pxごとになるよう座標を追加する
-		appendPathSample(position);
-	}
+	paintcore::Layer & layer = getLayer(strokeLayerId);
+	engine.beginStroke(position, layer.canvas);
 }
 
 void PaintTool::addStrokePoint(const glm::vec2 & position) {
-	// 同じ位置が繰り返し届いた場合は、何もしない
-	if (glm::distance(position, previousInputPoint) <= 0.0001f) {
-		return;
-	}
-
-	const glm::vec2 midpoint = (previousInputPoint + position) * 0.5f;
-
-	appendQuadratic(
-		curveStartPoint,
-		previousInputPoint,
-		midpoint);
-
-	curveStartPoint = midpoint;
-	previousInputPoint = position;
+	engine.addStrokePoint(position);
 }
 
 void PaintTool::finishStroke(const glm::vec2 & position) {
-	// 最後のドラッグ位置とリリース位置が違う場合も取り込む
-	addStrokePoint(position);
-
-	// 中点で止まっていた線を、最後の入力位置までつなぐ
-	// 上のaddStrokePointによってpreviousInputPoint == positionになってる
-	appendQuadratic(
-		curveStartPoint,
-		previousInputPoint,
-		previousInputPoint);
-
-	// 3px未満の余りがあっても、終点には円を置く
-	if (distanceSinceStamp > 0.0001f) {
-		points.push_back(previousInputPoint);
-	}
-
-	distanceSinceStamp = 0.0f;
-	curveStartPoint = previousInputPoint;
+	engine.finishStroke(position);
 }
 
 void PaintTool::drawLine(bool penSwitch, float eraserAlpha) {
-	Layer & layer = getLayer(strokeLayerId);
+	paintcore::Layer & layer = getLayer(strokeLayerId);
 
-	ofFill();
+	const paintcore::BrushSettings settings {
+		strokeSize,
+		color,
+		penSwitch,
+		eraserAlpha
+	};
 
-	preFbo2D.begin();
-	ofClear(0, 0, 0, 0);
-
-    // 途中保存した画像を、そのままコピーする
-	ofDisableAlphaBlending();
-	ofSetColor(255, 255, 255, 255);
-	strokeCheckpointFbo.draw(0, 0);
-
-	// その上に未保存の点を描く
-	ofEnableAlphaBlending();
-
-	if (penSwitch) {
-		ofSetColor(color);
-		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	} else {
-		ofSetColor(255, 255, 255, eraserAlpha);
-		glBlendFuncSeparate(
-			GL_ZERO, GL_ONE_MINUS_SRC_ALPHA,
-			GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
-	}
-
-	for (int i = strokePointStartIndex; i < static_cast<int>(points.size()); i++) {
-		ofDrawCircle(points[i].x, points[i].y, strokeSize * 25);
-	}
-
-	preFbo2D.end();
-
-	const int pendingPointCount = static_cast<int>(points.size()) - strokePointStartIndex;
-
-	if (pendingPointCount >= STROKE_CHUNK_SIZE) {
-		// ここまでの描画結果を途中保存する
-		copyFbo(preFbo2D, strokeCheckpointFbo);
-
-		// 次の点との補間に使うため、最後の座標だけ残す
-		const glm::vec2 lastPoint = points.back();
-
-		points.clear();
-		points.push_back(lastPoint);
-
-		// 残した点はすでに画像へ描画済みなので、再描画しない
-		strokePointStartIndex = 1;
-	}
-
-	layer.filter->markDirty();
+	engine.drawStroke(settings);
+	getFilter(layer.id).markDirty();
 }
 
 void PaintTool::drawCanvas(bool drawingFlag) {
-	float time = ofGetElapsedTimef();
+	const float time = ofGetElapsedTimef();
+	const int previewLayerId = drawingFlag ? strokeLayerId : 0;
 
-	for (auto it = layers.rbegin(); it != layers.rend(); ++it) {
-		Layer & layer = **it; // 配列の中の、ポインタの中の、Layer本体だから**it
+	// 第三引数はラムダ式
+	// 目的のレイヤーに対応するフィルターに応じて描画関数を呼ぶ
+	// thisは今回使いたいgetFilter()やdraw()を持つオブジェクト
+	// timeはこのdrawCanvas内で定義されたローカル変数なので明示が必要
+	paintcore::CanvasRenderer::draw(
+		engine,
+		previewLayerId,
+		[this, time](const paintcore::Layer & layer, ofFbo & source) {
+			getFilter(layer.id).draw(source, time);
+		});
+}
 
-		const bool isDrawingLayer = drawingFlag && layer.id == strokeLayerId;
+void PaintTool::storeLayerHistory(HistoryEntry& entry, int layerIndex) {
+	entry.layerIndex = layerIndex;
+	entry.storedLayer = engine.takeLayerAt(layerIndex);
 
-		ofFbo & source = isDrawingLayer ? preFbo2D : layer.canvas;
+	
+	const int id = entry.storedLayer->id;
+	entry.storedFilter = std::move(filters.at(id));
+	filters.erase(id);
+}
 
-		layer.filter->draw(source, time);
+void PaintTool::restoreLayerFromHistory(HistoryEntry& entry) {
+	const int id = entry.storedLayer->id;
+
+	entry.storedFilter->markDirty();
+	filters.emplace(id, std::move(entry.storedFilter));
+
+	engine.insertLayerAt(entry.layerIndex, std::move(entry.storedLayer));
+}
+
+void PaintTool::swapCanvasHistory(HistoryEntry& entry) {
+	paintcore::Layer & layer = getLayer(entry.layerId);
+	ofFbo & target = layer.canvas;
+
+	paintcore::copyFbo(target, historySwapFbo);
+	paintcore::copyFbo(entry.image, target);
+	paintcore::copyFbo(historySwapFbo, entry.image);
+
+	getFilter(layer.id).markDirty();
+}
+
+// レイヤーの位置を調べてから履歴を保存する関数
+// レイヤー削除時はすでに位置がわかってるから直接storeLayerHistoryを呼ぶ
+void PaintTool::takeHistoryLayer(HistoryEntry& entry) {
+	const int layerIndex = findLayerIndex(entry.layerId);
+
+	if (layerIndex == -1) {
+		throw std::logic_error("History layer was not found.");
+	}
+
+	storeLayerHistory(entry, layerIndex);
+}
+
+void HistoryEntry::undo(PaintTool& tool) {
+	switch (type) {
+	case HistoryType::CanvasEdit:
+		tool.swapCanvasHistory(*this);
+		break;
+
+	case HistoryType::LayerAdded:
+		tool.takeHistoryLayer(*this);
+		tool.selectedLayerId = selectedBefore;
+		tool.nextLayerId = nextIdBefore;
+		break;
+
+	case HistoryType::LayerDeleted:
+		tool.restoreLayerFromHistory(*this);
+		tool.selectedLayerId = selectedBefore;
+		break;
 	}
 }
 
-void PaintTool::copyFbo(ofFbo & source, ofFbo & destination) {
-	ofPushStyle();
+void HistoryEntry::redo(PaintTool & tool) {
+	switch (type) {
+	case HistoryType::CanvasEdit:
+		tool.swapCanvasHistory(*this);
+		break;
 
-	destination.begin();
-	ofClear(0, 0, 0, 0);
-	ofDisableAlphaBlending();
-	ofSetColor(255, 255, 255, 255);
+	case HistoryType::LayerAdded:
+		tool.restoreLayerFromHistory(*this);
+		tool.selectedLayerId = selectedAfter;
+		tool.nextLayerId = nextIdAfter;
+		break;
 
-	source.draw(0, 0);
-
-	destination.end();
-
-	ofPopStyle();
-}
-
-void PaintTool::swapHistory(int index) {
-	HistoryEntry & entry = history[index];
-
-	if (entry.type == HistoryType::CanvasEdit) {
-		Layer & layer = getLayer(entry.layerId);
-		ofFbo & target = layer.canvas;
-
-		copyFbo(target, historySwapFbo);
-		copyFbo(entry.image, target);
-		copyFbo(historySwapFbo, entry.image);
-
-		layer.filter->markDirty();
-		return;
-	}
-
-	if (entry.type == HistoryType::LayerAdded) {
-		if (!entry.storedLayer) {
-			// UNDO：追加されたレイヤーを履歴へ預ける
-			int layerIndex = -1;
-
-			for (int i = 0; i < static_cast<int>(layers.size()); ++i) {
-				if (layers[i]->id == entry.layerId) {
-					layerIndex = i;
-					break;
-				}
-			}
-
-			if (layerIndex == -1) {
-				throw std::logic_error(
-					"Added layer was not found during undo.");
-			}
-
-			// 現在の位置を記憶し、REDOで同じ場所へ戻す
-			entry.layerIndex = layerIndex;
-
-			entry.storedLayer = std::move(layers[layerIndex]);
-			layers.erase(layers.begin() + layerIndex);
-
-			selectedLayerId = entry.selectedBefore;
-			nextLayerId = entry.nextIdBefore;
-		} else {
-			// REDO：預けていたレイヤーを配列へ戻す
-			entry.storedLayer->filter->markDirty();
-
-			layers.insert(
-				layers.begin() + entry.layerIndex,
-				std::move(entry.storedLayer));
-
-			selectedLayerId = entry.selectedAfter;
-			nextLayerId = entry.nextIdAfter;
-		}
-	}
-
-	if (entry.type == HistoryType::LayerDeleted) {
-		if (entry.storedLayer) {
-			// UNDO：削除したレイヤーを元の位置へ戻す
-			entry.storedLayer->filter->markDirty();
-
-			layers.insert(
-				layers.begin() + entry.layerIndex,
-				std::move(entry.storedLayer));
-
-			selectedLayerId = entry.selectedBefore;
-		} else {
-			// REDO：復元したレイヤーを再び取り除く
-			int layerIndex = -1;
-
-			for (int i = 0; i < static_cast<int>(layers.size()); ++i) {
-				if (layers[i]->id == entry.layerId) {
-					layerIndex = i;
-					break;
-				}
-			}
-
-			if (layerIndex == -1) {
-				throw std::logic_error(
-					"Deleted layer was not found during redo.");
-			}
-
-			// 次のUNDOで戻す位置を記憶する
-			entry.layerIndex = layerIndex;
-
-			entry.storedLayer = std::move(layers[layerIndex]);
-			layers.erase(layers.begin() + layerIndex);
-
-			selectedLayerId = entry.selectedAfter;
-		}
+	case HistoryType::LayerDeleted:
+		tool.takeHistoryLayer(*this);
+		tool.selectedLayerId = selectedAfter;
+		break;
 	}
 }
 
-void PaintTool::saveUndo(Layer& layer) {
+void HistoryEntry::reset() {
+	storedLayer.reset();
+	storedFilter.reset();
+
+	type = HistoryType::CanvasEdit;
+	layerId = 0;
+	layerIndex = 0;
+	selectedBefore = 0;
+	selectedAfter = 0;
+	nextIdBefore = 0;
+	nextIdAfter = 0;
+}
+
+void PaintTool::saveUndo(paintcore::Layer & layer) {
 	HistoryEntry & entry = prepareHistory();
 
 	entry.type = HistoryType::CanvasEdit;
 	entry.layerId = layer.id;
 
-	copyFbo(layer.canvas, entry.image);
+	paintcore::copyFbo(layer.canvas, entry.image);
 
 	finishHistory();
 }
 
 void PaintTool::undo() {
-	if (undoCount <= 0 || strokeLayerId !=0) {
+	if (strokeLayerId != 0) {
 		return;
 	}
 
-	undoWriteIndex = (undoWriteIndex + UNDO_CAPACITY - 1) % UNDO_CAPACITY;
-
-	swapHistory(undoWriteIndex);
-
-	undoCount--;
-	redoCount++;
+	historyManager.undo(*this);
 }
 
 void PaintTool::redo() {
-	if (redoCount <= 0 || strokeLayerId != 0) {
+	if (strokeLayerId != 0) {
 		return;
 	}
 
-	swapHistory(undoWriteIndex);
-
-	undoWriteIndex = (undoWriteIndex + 1) % UNDO_CAPACITY;
-
-	undoCount++;
-	redoCount--;
+	historyManager.redo(*this);
 }
 
 void PaintTool::deleteAll() {
@@ -365,7 +199,7 @@ void PaintTool::deleteAll() {
 		return;
 	}
 
-	Layer & layer = getLayer(selectedLayerId);
+	paintcore::Layer & layer = getLayer(selectedLayerId);
 
 	saveUndo(layer);
 
@@ -373,7 +207,7 @@ void PaintTool::deleteAll() {
 	ofClear(0, 0, 0, 0);
 	layer.canvas.end();
 
-	layer.filter->markDirty();
+	getFilter(layer.id).markDirty();
 }
 
 int PaintTool::addLayer(LayerType type, bool recordHistory) {
@@ -401,21 +235,19 @@ int PaintTool::addLayer(LayerType type, bool recordHistory) {
 	const std::string name = "Layer" + std::to_string(id);
 
 	// レイヤー本体を作る
-	auto layer = std::make_unique<Layer>(
+	auto layer = std::make_unique<paintcore::Layer>(
 		id,
 		name,
 		canvasWidth,
-		canvasHeight,
-		std::move(filter));
+		canvasHeight);
 
-	int insertIndex = 0;
+	filter->setup(canvasWidth, canvasHeight);
+	filter->markDirty();
 
-	for (int i = 0; i < static_cast<int>(layers.size()); ++i) {
-		if (layers[i] ->id == selectedLayerId) {
-			insertIndex = i;
-			break;
-		}
-	}
+	// 現在選択中のレイヤーの上に新規レイヤーを作る
+	// 選択中のレイヤーがないときは基本起動時につき最初のレイヤーを生成
+	const int selectedIndex = findLayerIndex(selectedLayerId);
+	const int insertIndex = selectedIndex >= 0 ? selectedIndex : 0;
 
 	if (recordHistory) {
 		HistoryEntry & entry = prepareHistory();
@@ -429,9 +261,9 @@ int PaintTool::addLayer(LayerType type, bool recordHistory) {
 		entry.nextIdAfter = nextLayerId + 1;
 	}
 
-    layers.insert(
-		layers.begin() + insertIndex,
-		std::move(layer));
+	filters.emplace(id, std::move(filter));
+
+    engine.insertLayerAt(insertIndex, std::move(layer));
 
 	++nextLayerId;
 	selectedLayerId = id;
@@ -443,81 +275,46 @@ int PaintTool::addLayer(LayerType type, bool recordHistory) {
 	return id;
 }
 
-Layer& PaintTool::getLayer(int layerId) {
-	for (auto& layer : layers) {
-		if (layer->id == layerId) {
-			return *layer;
-		}
-	}
+int PaintTool::findLayerIndex(int layerId) const {
+	return engine.findLayerIndex(layerId);
+}
 
-    throw std::out_of_range("Layer ID was not found.");
+paintcore::Layer & PaintTool::getLayer(int layerId) {
+	return engine.getLayer(layerId);
+}
+
+LayerFilter& PaintTool::getFilter(int layerId) {
+	return *filters.at(layerId);
 }
 
 void PaintTool::commitStroke() {
-	Layer & layer = getLayer(strokeLayerId);
+	paintcore::Layer & layer = getLayer(strokeLayerId);
 
 	saveUndo(layer);
-	copyFbo(preFbo2D, layer.canvas);
-	layer.filter->markDirty();
+	engine.commitStroke(layer.canvas);
+	getFilter(layer.id).markDirty();
 
-	points.clear();
-	strokePointStartIndex = 0;
 	strokeLayerId = 0;
 }
 
 void PaintTool::moveLayer(int layerId, int destinationIndex) {
-	// 線を描いている途中では並べ替えない
 	if (strokeLayerId != 0) {
 		return;
 	}
 
-	const int layerCount = static_cast<int>(layers.size());
-
-	if (destinationIndex < 0 || destinationIndex >= layerCount) {
-		return;
-	}
-
-	// 移動するレイヤーの、現在の配列位置を調べる
-	int sourceIndex = -1;
-
-	for (int i = 0; i < layerCount; ++i) {
-		if (layers[i]->id == layerId) {
-			sourceIndex = i;
-			break;
-		}
-	}
-
-	if (sourceIndex == -1 || sourceIndex == destinationIndex) {
-		return;
-	}
-
-	// 移動対象の所有権を、いったんローカル変数へ移す
-	auto movingLayer = std::move(layers[sourceIndex]);
-
-	// 元の配列位置を取り除く
-	layers.erase(layers.begin() + sourceIndex);
-
-	// 移動後の位置へ挿入する
-	layers.insert(
-		layers.begin() + destinationIndex,
-		std::move(movingLayer));
+	engine.moveLayer(layerId, destinationIndex);
 }
 
 void PaintTool::deleteLayer(int layerId) {
+	const auto & layers = engine.getLayers();
+
 	// 描画中と、最後の1枚になった場合は削除しない
 	if (strokeLayerId != 0 || layers.size() <= 1) {
 		return;
 	}
 
 	const int layerCount = static_cast<int>(layers.size());
-	int deleteIndex = -1;
-
-	for (int i = 0; i < layerCount; ++i) {
-		if (layers[i]->id == layerId) {
-			deleteIndex = i;
-			break;
-		}
-	}
+	const int deleteIndex = findLayerIndex(layerId);
 
 	if (deleteIndex == -1) {
 		return;
@@ -539,13 +336,11 @@ void PaintTool::deleteLayer(int layerId) {
 
 	entry.type = HistoryType::LayerDeleted;
 	entry.layerId = layerId;
-	entry.layerIndex = deleteIndex;
 	entry.selectedBefore = selectedLayerId;
 	entry.selectedAfter = selectedAfter;
 
-    // レイヤー本体を履歴へ預けてから、配列の枠を取り除く
-	entry.storedLayer = std::move(layers[deleteIndex]);
-	layers.erase(layers.begin() + deleteIndex);
+    // 削除時の位置を記録し、レイヤー本体を履歴へ預ける
+	storeLayerHistory(entry, deleteIndex);
 
     selectedLayerId = selectedAfter;
 
@@ -556,60 +351,30 @@ void PaintTool::deleteLayer(int layerId) {
 // REDOができなくなるのでその分のレイヤーを破棄
 // 余計な情報がうっかり持ち込まれないように、historyの次のインデックスを初期化
 HistoryEntry& PaintTool::prepareHistory() {
-	// 新しい操作を始めるため、REDO側の履歴を破棄する
-	for (int i = 0; i < redoCount; ++i) {
-		const int index = (undoWriteIndex + i) % UNDO_CAPACITY;
-		history[index].storedLayer.reset();
-	}
-
-	redoCount = 0;
-
-	HistoryEntry & entry = history[undoWriteIndex];
-
-	// 上書きする履歴が預かっていたレイヤーを開放する
-	entry.storedLayer.reset();
-
-    entry.type = HistoryType::CanvasEdit;
-	entry.layerId = 0;
-	entry.layerIndex = 0;
-	entry.selectedBefore = 0;
-	entry.selectedAfter = 0;
-	entry.nextIdBefore = 0;
-	entry.nextIdAfter = 0;
-
-	return entry;
+	return historyManager.prepare();
 }
 
 void PaintTool::finishHistory() {
-	undoWriteIndex = (undoWriteIndex + 1) % UNDO_CAPACITY;
-
-	if (undoCount < UNDO_CAPACITY) {
-		undoCount++;
-	}
+	historyManager.finish();
 }
 
 void PaintTool::clearHistory() {
-	for (int i = 0; i < UNDO_CAPACITY; ++i) {
-		history[i].storedLayer.reset();
+	historyManager.clear();
+}
+
+GlowFilter* PaintTool::getGlowFilter(int layerId) {
+	if (findLayerIndex(layerId) == -1) {
+		return nullptr;
 	}
 
-	undoWriteIndex = 0;
-	undoCount = 0;
-	redoCount = 0;
+	LayerFilter& filter = getFilter(layerId);
+	if (filter.getType() != LayerType::Glow) {
+		return nullptr;
+	}
+
+	return static_cast<GlowFilter *>(&filter);
 }
 
 GlowFilter* PaintTool::getSelectedGlowFilter() {
-	for (auto& layer : layers) {
-		if (layer->id != selectedLayerId) {
-			continue;
-		}
-
-		if (layer->filter->getType() != LayerType::Glow) {
-			return nullptr;
-		}
-
-		return static_cast<GlowFilter *>(layer->filter.get());
-	}
-
-	return nullptr;
+	return getGlowFilter(selectedLayerId);
 }

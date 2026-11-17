@@ -4,11 +4,14 @@
 #include "ofMain.h"
 #include "NormalFilter.h"
 #include "GlowFilter.h"
-
-#include "Layer.h"
+#include "PaintLayer.h"
+#include "PaintEngine.h"
+#include "HistoryAction.h"
+#include "HistoryManager.h"
 
 #include <memory>
 #include <vector>
+#include <unordered_map>
 
 enum class HistoryType {
 	CanvasEdit,
@@ -16,13 +19,20 @@ enum class HistoryType {
 	LayerDeleted
 };
 
-struct HistoryEntry {
+class PaintTool;
+
+struct HistoryEntry : public paintcore::HistoryAction<PaintTool> {
+	void undo(PaintTool & tool) override;
+	void redo(PaintTool & tool) override;
+	void reset();
+
 	HistoryType type = HistoryType::CanvasEdit;
 	int layerId = 0;
 	ofFbo image;
 
 	// UNDOで取り除いたレイヤーを預かる
-	std::unique_ptr<Layer> storedLayer;
+	std::unique_ptr<paintcore::Layer> storedLayer;
+	std::unique_ptr<LayerFilter> storedFilter;
 
 	// 配列内の位置
 	int layerIndex = 0;
@@ -39,74 +49,21 @@ struct HistoryEntry {
 class PaintTool {
 public:
 	ofColor color;
-	vector<glm::vec2> points;
-	ofFbo preFbo2D;
-	ofFbo strokeCheckpointFbo;
-
-	// この数の未保存点がたまったら途中保存する
-	static constexpr int STROKE_CHUNK_SIZE = 10;
 
 	ofFbo historySwapFbo;
 
-	// pointsのうち、描画を始める位置
-	// 0：先頭から描く
-	// 1：先頭は接続用の点なので、描かずに飛ばす
-	int strokePointStartIndex = 0;
-
 	static const int UNDO_CAPACITY = 20;
-	HistoryEntry history[UNDO_CAPACITY];
-	int undoWriteIndex = 0;
-	int undoCount = 0;
-	int redoCount = 0;
 
 	PaintTool(int mainWidth, int mainHeight);
-
-	// 一筆を描き始めるための準備
-	void beginStroke(const glm::vec2 & position);
-
-	// 以下補間のための緊急コード、未確認！！
-
-	// ドラッグで届いた入力座標を追加する
-	void addStrokePoint(const glm::vec2 & position);
-
-	// 線の終端まで描画点を追加する
-	void finishStroke(const glm::vec2 & position);
-
-	// 2次ベジェ曲線を細かくたどる
-	void appendQuadratic(
-		const glm::vec2 & start,
-		const glm::vec2 & control,
-		const glm::vec2 & end);
-
-	// 曲線をたどった距離に応じて、描画点を追加する
-	void appendPathSample(const glm::vec2 & position);
-
-	// 直前に届いた、補間前の入力座標
-	glm::vec2 previousInputPoint { 0.0f, 0.0f };
-
-	// 次のベジェ曲線の始点
-	glm::vec2 curveStartPoint { 0.0f, 0.0f };
-
-	// 曲線を細かくたどる際の直前の座標
-	glm::vec2 previousPathSample { 0.0f, 0.0f };
-
-	// 最後に円を置いてから進んだ距離
-	float distanceSinceStamp = 0.0f;
-
-	// ここまで！！
-
 	void drawLine(bool penSwith, float eraserAlpha);
 	void drawCanvas(bool drawingFlag);
-	void copyFbo(ofFbo & source, ofFbo & destination);
-	void swapHistory(int index);
-	void saveUndo(Layer& layer);
+	void saveUndo(paintcore::Layer & layer);
 	void undo();
 	void redo();
 	void deleteAll();
 
 	float strokeSize;
 
-	std::vector<std::unique_ptr<Layer>> layers;
 	int selectedLayerId = 0;
 	int nextLayerId = 1;
 	int canvasWidth = 0;
@@ -114,8 +71,12 @@ public:
 	// 現在描いている線の保存先。0は描画していない状態
 	int strokeLayerId = 0;
 
-	// IDからレイヤー本体を取得する
-	Layer & getLayer(int layerId);
+	// レイヤーIDから現在の配列位置を返す。見つからなければ-1。
+	int findLayerIndex(int layerId) const;
+
+	// IDからレイヤー本体やフィルターを取得する
+	paintcore::Layer & getLayer(int layerId);
+	LayerFilter & getFilter(int layerId);
 	// 描画途中の画像を、対象レイヤーへ確定する
 	void commitStroke();
 
@@ -132,4 +93,24 @@ public:
 	void clearHistory();
 
 	GlowFilter * getSelectedGlowFilter();
+
+	void beginStroke(const glm::vec2 & position);
+	void addStrokePoint(const glm::vec2 & position);
+	void finishStroke(const glm::vec2 & position);
+
+	paintcore::PaintEngine engine;
+	GlowFilter * getGlowFilter(int layerId);
+
+private:
+	void storeLayerHistory(HistoryEntry & entry, int layerIndex);
+	void restoreLayerFromHistory(HistoryEntry & entry);
+	// idというキーを使ってフィルターを検索するための連想配列
+	std::unordered_map<int, std::unique_ptr<LayerFilter>> filters;
+
+	// HistoryEntryに対して、このクラスのプライベートメンバ変数にアクセスを許可
+	friend struct HistoryEntry;
+
+	void swapCanvasHistory(HistoryEntry & entry);
+	void takeHistoryLayer(HistoryEntry & entry);
+	paintcore::HistoryManager<HistoryEntry, UNDO_CAPACITY> historyManager;
 };
