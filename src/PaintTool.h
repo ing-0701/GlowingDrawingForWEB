@@ -96,7 +96,6 @@ public:
 
 	void beginStroke(const glm::vec2 & position);
 	void addStrokePoint(const glm::vec2 & position);
-	void finishStroke(const glm::vec2 & position);
 
 	paintcore::PaintEngine engine;
 	GlowFilter * getGlowFilter(int layerId);

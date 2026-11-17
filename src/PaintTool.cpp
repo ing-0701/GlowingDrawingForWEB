@@ -40,10 +40,6 @@ void PaintTool::addStrokePoint(const glm::vec2 & position) {
 	engine.addStrokePoint(position);
 }
 
-void PaintTool::finishStroke(const glm::vec2 & position) {
-	engine.finishStroke(position);
-}
-
 void PaintTool::drawLine(bool penSwitch, float eraserAlpha) {
 	paintcore::Layer & layer = getLayer(strokeLayerId);
 

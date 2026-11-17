@@ -374,8 +374,6 @@ void ofApp::mouseReleased(int x, int y, int button) {
 #endif
 
 	if (drawingFlag) {
-		paintTool.finishStroke(glm::vec2(x, y));
-
 #ifdef __EMSCRIPTEN__
 		const bool isPen = getPenMode() != 0;
 		if (isPen) {
