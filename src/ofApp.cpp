@@ -142,7 +142,7 @@ void ofApp::setup() {
 
 	ofLogNotice("Layers")
 		<< "Created Layer" << initialLayerId
-		<< ", count=" << paintTool.layers.size()
+		<< ", count=" << paintTool.engine.getLayers().size()
 		<< ", selected=" << paintTool.selectedLayerId;
 
 #ifndef __EMSCRIPTEN__
@@ -187,13 +187,9 @@ void ofApp::update() {
 		} else if (command == 6) {
 			const int layerId = getPaintCommandLayerId();
 
-			// Reactの表示から消える直前の行が押される場合もあるため、
-			// 現在も存在するIDか確認してから選択する
-			for (const auto & layer : paintTool.layers) {
-				if (layer->id == layerId) {
-					paintTool.selectedLayerId = layerId;
-					break;
-				}
+			// findLayerIndexで-1以外が返ってきたならちゃんと存在するID
+			if (paintTool.findLayerIndex(layerId) >= 0) {
+				paintTool.selectedLayerId = layerId;
 			}
 		} else if (command == 7) {
 			paintTool.deleteLayer(getPaintCommandLayerId());
@@ -201,14 +197,7 @@ void ofApp::update() {
 			const int layerId = getPaintCommandLayerId();
 			const int targetLayerId = getPaintCommandTargetLayerId();
 
-			int destinationIndex = -1;
-
-			for (int i = 0; i < static_cast<int>(paintTool.layers.size()); ++i) {
-				if (paintTool.layers[i]->id == targetLayerId) {
-					destinationIndex = i;
-					break;
-				}
-			}
+			const int destinationIndex = paintTool.findLayerIndex(targetLayerId);
 
 			if (destinationIndex != -1) {
 				paintTool.moveLayer(layerId, destinationIndex);
@@ -217,17 +206,7 @@ void ofApp::update() {
 			const int layerId = getPaintCommandLayerId();
 			const float value = static_cast<float>(getPaintCommandValue());
 
-			for (auto & layer : paintTool.layers) {
-				if (layer->id != layerId) {
-					continue;
-				}
-
-				if (layer->filter->getType() != LayerType::Glow) {
-					break;
-				}
-
-				auto * glow = static_cast<GlowFilter *>(layer->filter.get());
-
+			if (GlowFilter* glow = paintTool.getGlowFilter(layerId)) {
 				float sigma = glow->getSigma();
 				float strength = glow->getStrength();
 				float period = glow->getPeriod();
@@ -241,7 +220,6 @@ void ofApp::update() {
 				}
 
 				glow->setParameters(sigma, strength, period);
-				break;
 			}
 		}
 
@@ -298,8 +276,12 @@ void ofApp::draw() {
 
 #ifndef __EMSCRIPTEN__
 	ui.drawLayerPanel(
-		paintTool.layers,
-		paintTool.selectedLayerId);
+		paintTool.engine.getLayers(),
+		paintTool.selectedLayerId,
+		[this](int layerId) {
+			return paintTool.getFilter(layerId).getType();
+		}
+	);
 #endif
 }
 
@@ -330,7 +312,7 @@ void ofApp::mousePressed(int x, int y, int button) {
 
 #ifndef __EMSCRIPTEN__
 	if (!drawingFlag) {
-		const LayerUiAction action = ui.pressLayerPanel(x, y, paintTool.layers);
+		const LayerUiAction action = ui.pressLayerPanel(x, y, paintTool.engine.getLayers());
 
 		switch (action.type) {
 		case LayerUiActionType::Select:
@@ -349,7 +331,7 @@ void ofApp::mousePressed(int x, int y, int button) {
 			paintTool.deleteLayer(action.layerId);
 
 			// 削除後の枚数に合わせてスクロール位置を補正する
-			ui.scrollLayerPanel(0.0f, static_cast<int>(paintTool.layers.size()));
+			ui.scrollLayerPanel(0.0f, static_cast<int>(paintTool.engine.getLayers().size()));
 			return;
 
 		case LayerUiActionType::Move:
@@ -382,7 +364,7 @@ void ofApp::mouseReleased(int x, int y, int button) {
 	const LayerUiAction action = ui.releaseLayerPanel(
 		x,
 		y,
-		static_cast<int>(paintTool.layers.size()));
+		static_cast<int>(paintTool.engine.getLayers().size()));
 
 	if (action.type == LayerUiActionType::Move) {
 		paintTool.moveLayer(
@@ -392,8 +374,6 @@ void ofApp::mouseReleased(int x, int y, int button) {
 #endif
 
 	if (drawingFlag) {
-		paintTool.finishStroke(glm::vec2(x, y));
-
 #ifdef __EMSCRIPTEN__
 		const bool isPen = getPenMode() != 0;
 		if (isPen) {
@@ -482,7 +462,7 @@ void ofApp::mouseScrolled(
 	if (listArea.inside(x, y)) {
 		ui.scrollLayerPanel(
 			scrollY,
-			static_cast<int>(paintTool.layers.size()));
+			static_cast<int>(paintTool.engine.getLayers().size()));
 	}
 #endif
 }
@@ -496,20 +476,17 @@ void ofApp::syncLayerStateToWeb() {
 	state["selectedLayerId"] = paintTool.selectedLayerId;
 	state["layers"] = ofJson::array();
 
-	for (const auto & layer : paintTool.layers) {
+	for (const auto & layer : paintTool.engine.getLayers()) {
 		ofJson item;
+
+		const GlowFilter * glow = paintTool.getGlowFilter(layer->id);
 
 		item["id"] = layer->id;
 		item["name"] = layer->name;
-		item["type"] = layer->filter->getType() == LayerType::Normal
-			? "Normal"
-			: "Glow";
-
+		item["type"] = glow ? "Glow" : "Normal";
 		item["glow"] = nullptr;
 
-		if (layer->filter->getType() == LayerType::Glow) {
-			const auto * glow = static_cast<const GlowFilter *>(layer->filter.get());
-
+		if (glow) {
 			item["glow"] = {
 				{ "sigma", glow->getSigma() },
 				{ "strength", glow->getStrength() },

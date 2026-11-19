@@ -3,10 +3,12 @@
 #include "ofMain.h"
 #include "ofxGui.h"
 
-#include "Layer.h"
+#include "PaintLayer.h"
+#include "LayerFilter.h"
 
 #include <memory>
 #include <vector>
+#include <functional>
 
 enum class LayerUiActionType {
 	None,
@@ -45,13 +47,14 @@ public:
 	void placeUi(bool isPen);
 	float lastHue = -1.0f;
 	void drawLayerPanel(
-		const std::vector<std::unique_ptr<Layer>> & layers,
-		int selectedLayerId);
+		const std::vector<std::unique_ptr<paintcore::Layer>> & layers,
+		int selectedLayerId,
+		const std::function<LayerType(int)>& getLayerType);
 
 	LayerUiAction pressLayerPanel(
 		int x,
 		int y,
-		const std::vector<std::unique_ptr<Layer>> & layers);
+		const std::vector<std::unique_ptr<paintcore::Layer>> & layers);
 
 	void scrollLayerPanel(float scrollY, int layerCount);
 	LayerUiAction releaseLayerPanel(

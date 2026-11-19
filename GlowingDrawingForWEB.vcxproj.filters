@@ -43,9 +43,27 @@
     <ClCompile Include="..\..\..\addons\ofxGui\src\ofxToggle.cpp">
       <Filter>addons\ofxGui\src</Filter>
     </ClCompile>
-    <ClCompile Include="src\Layer.cpp" />
-    <ClCompile Include="src\GlowFilter.cpp" />
-    <ClCompile Include="src\NormalFilter.cpp" />
+    <ClCompile Include="..\..\..\addons\ofxPaintCore\src\Brush.cpp">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\addons\ofxPaintCore\src\CanvasRenderer.cpp">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\addons\ofxPaintCore\src\PaintEngine.cpp">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\addons\ofxPaintCore\src\PaintLayer.cpp">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\addons\ofxPaintCore\src\StrokeSampler.cpp">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GlowFilter.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\NormalFilter.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -59,6 +77,15 @@
     </Filter>
     <Filter Include="addons\ofxGui\src">
       <UniqueIdentifier>{345CD044--32A-0-40-7F-A-FA0-8BA528E5A25B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="addons\ofxPaintCore">
+      <UniqueIdentifier>{2deb7d13-ec0c-40c2-9259-a4da079a211c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="addons\ofxPaintCore\src">
+      <UniqueIdentifier>{305d7509-f9ef-4751-9d4d-321f879931ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shader">
+      <UniqueIdentifier>{7c6e191b-e24d-4a81-b3bd-67ba95b5cbaa}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -107,26 +134,76 @@
     <ClInclude Include="..\..\..\addons\ofxGui\src\ofxToggle.h">
       <Filter>addons\ofxGui\src</Filter>
     </ClInclude>
-    <ClInclude Include="src\Layer.h" />
-    <ClInclude Include="src\LayerFilter.h" />
-    <ClInclude Include="src\GlowFilter.h" />
-    <ClInclude Include="src\NormalFilter.h" />
+    <ClInclude Include="..\..\..\addons\ofxPaintCore\src\Brush.h">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\addons\ofxPaintCore\src\CanvasRenderer.h">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\addons\ofxPaintCore\src\PaintEngine.h">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\addons\ofxPaintCore\src\PaintLayer.h">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\addons\ofxPaintCore\src\StrokeSampler.h">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GlowFilter.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\LayerFilter.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\NormalFilter.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\addons\ofxPaintCore\src\HistoryAction.h">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\addons\ofxPaintCore\src\HistoryManager.h">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="icon.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="bin\data\shaders\glowBlur.frag" />
-    <None Include="bin\data\shaders\glowBlur.vert" />
-    <None Include="bin\data\shaders\glowBlurWeb.frag" />
-    <None Include="bin\data\shaders\glowBlurWeb.vert" />
-    <None Include="bin\data\shaders\glowDownsample.frag" />
-    <None Include="bin\data\shaders\glowDownsample.vert" />
-    <None Include="bin\data\shaders\glowDownsampleWeb.vert" />
-    <None Include="bin\data\shaders\glowDownsampleWeb.frag" />
-    <None Include="bin\data\shaders\glowComposite.vert" />
-    <None Include="bin\data\shaders\glowCompositeWeb.vert" />
-    <None Include="bin\data\shaders\glowComposite.frag" />
-    <None Include="bin\data\shaders\glowCompositeWeb.frag" />
+    <None Include="bin\data\shaders\glowBlur.frag">
+      <Filter>src\shader</Filter>
+    </None>
+    <None Include="bin\data\shaders\glowBlur.vert">
+      <Filter>src\shader</Filter>
+    </None>
+    <None Include="bin\data\shaders\glowBlurWeb.frag">
+      <Filter>src\shader</Filter>
+    </None>
+    <None Include="bin\data\shaders\glowBlurWeb.vert">
+      <Filter>src\shader</Filter>
+    </None>
+    <None Include="bin\data\shaders\glowComposite.frag">
+      <Filter>src\shader</Filter>
+    </None>
+    <None Include="bin\data\shaders\glowComposite.vert">
+      <Filter>src\shader</Filter>
+    </None>
+    <None Include="bin\data\shaders\glowCompositeWeb.frag">
+      <Filter>src\shader</Filter>
+    </None>
+    <None Include="bin\data\shaders\glowCompositeWeb.vert">
+      <Filter>src\shader</Filter>
+    </None>
+    <None Include="bin\data\shaders\glowDownsample.frag">
+      <Filter>src\shader</Filter>
+    </None>
+    <None Include="bin\data\shaders\glowDownsample.vert">
+      <Filter>src\shader</Filter>
+    </None>
+    <None Include="bin\data\shaders\glowDownsampleWeb.frag">
+      <Filter>src\shader</Filter>
+    </None>
+    <None Include="bin\data\shaders\glowDownsampleWeb.vert">
+      <Filter>src\shader</Filter>
+    </None>
   </ItemGroup>
 </Project>

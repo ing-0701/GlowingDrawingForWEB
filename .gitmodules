@@ -1,0 +1,4 @@
+[submodule "addons/ofxPaintCore"]
+	path = addons/ofxPaintCore
+	url = https://github.com/ing-0701/ofxPaintCore.git
+	branch = main
