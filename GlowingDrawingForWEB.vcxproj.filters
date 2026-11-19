@@ -43,19 +43,19 @@
     <ClCompile Include="..\..\..\addons\ofxGui\src\ofxToggle.cpp">
       <Filter>addons\ofxGui\src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\addons\ofxPaintCore\src\Brush.cpp">
+    <ClCompile Include="addons\ofxPaintCore\src\Brush.cpp">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\addons\ofxPaintCore\src\CanvasRenderer.cpp">
+    <ClCompile Include="addons\ofxPaintCore\src\CanvasRenderer.cpp">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\addons\ofxPaintCore\src\PaintEngine.cpp">
+    <ClCompile Include="addons\ofxPaintCore\src\PaintEngine.cpp">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\addons\ofxPaintCore\src\PaintLayer.cpp">
+    <ClCompile Include="addons\ofxPaintCore\src\PaintLayer.cpp">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\addons\ofxPaintCore\src\StrokeSampler.cpp">
+    <ClCompile Include="addons\ofxPaintCore\src\StrokeSampler.cpp">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClCompile>
     <ClCompile Include="src\GlowFilter.cpp">
@@ -134,19 +134,19 @@
     <ClInclude Include="..\..\..\addons\ofxGui\src\ofxToggle.h">
       <Filter>addons\ofxGui\src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\addons\ofxPaintCore\src\Brush.h">
+    <ClInclude Include="addons\ofxPaintCore\src\Brush.h">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\addons\ofxPaintCore\src\CanvasRenderer.h">
+    <ClInclude Include="addons\ofxPaintCore\src\CanvasRenderer.h">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\addons\ofxPaintCore\src\PaintEngine.h">
+    <ClInclude Include="addons\ofxPaintCore\src\PaintEngine.h">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\addons\ofxPaintCore\src\PaintLayer.h">
+    <ClInclude Include="addons\ofxPaintCore\src\PaintLayer.h">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\addons\ofxPaintCore\src\StrokeSampler.h">
+    <ClInclude Include="addons\ofxPaintCore\src\StrokeSampler.h">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClInclude>
     <ClInclude Include="src\GlowFilter.h">
@@ -158,10 +158,10 @@
     <ClInclude Include="src\NormalFilter.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\addons\ofxPaintCore\src\HistoryAction.h">
+    <ClInclude Include="addons\ofxPaintCore\src\HistoryAction.h">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\addons\ofxPaintCore\src\HistoryManager.h">
+    <ClInclude Include="addons\ofxPaintCore\src\HistoryManager.h">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClInclude>
   </ItemGroup>
