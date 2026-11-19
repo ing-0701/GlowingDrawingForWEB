@@ -1,21 +1,12 @@
 #include "Ui.h"
 #include <algorithm>
 
-#ifdef __EMSCRIPTEN__
-	#include <emscripten.h>
-EM_JS(double, getHue, (), {
-	return window['paintHue'] ?? 0;
-})
-#endif
-
 Ui::Ui(int mainWidth) {
 	ofxGuiSetDefaultWidth(256);
 	ofxGuiSetDefaultHeight(10);
 
 #ifndef __EMSCRIPTEN__
-	hue.setup("Hue", 0.0, 0.0, 1.0);
-	hue.setSize(256, 30);
-	hue.setPosition(mainWidth, 258 + 32 * 0);
+	colorPicker.setup(mainWidth, 0);
 	penSize.setup("penSize", 0.1, 0.05, 1.0);
 	penSize.setSize(256, 30);
 	penSize.setPosition(mainWidth, 258 + 32 * 1);
@@ -56,9 +47,6 @@ Ui::Ui(int mainWidth) {
 	glowPeriod.unregisterMouseEvents();
 #endif // !__EMSCRIPTEN__
 
-	pickerPix.allocate(256, 256, OF_PIXELS_RGBA);
-	pickerTex.allocate(pickerPix);
-
 	layerAddRect.set(
 		mainWidth + 104, 354,
 		148, 28);
@@ -70,65 +58,23 @@ Ui::Ui(int mainWidth) {
 
 void Ui::updatePicker(int mainWidth) {
 #ifdef __EMSCRIPTEN__
-	const float currentHue = static_cast<float>(getHue());
 #else
-	const float currentHue = hue;
+	colorPicker.drawPicker();
 #endif
-
-	if (currentHue != lastHue) {
-		for (int y = 0; y < 256; y++) {
-			for (int x = 0; x < 256; x++) {
-				ofColor pixColor;
-				pixColor.setHsb(currentHue * 255, x, 255 - y);
-
-				pickerPix.setColor(x, y, pixColor);
-			}
-		}
-		pickerTex.loadData(pickerPix);
-		lastHue = currentHue;
-	}
-
-	ofSetColor(255, 255, 255, 255);
-	pickerTex.draw(mainWidth, 0, 256, 256);
 }
 
 void Ui::picking(int x, int y, int mainWidth) {
-
-	if (x < mainWidth) {
-		x = mainWidth;
-	} else if (ofGetWidth() <= x) {
-		x = ofGetWidth() - 1;
-	}
-
-	if (y < 0) {
-		y = 0;
-	} else if (255 < y) {
-		y = 255;
-	}
-
-	ofColor nowColor;
 #ifdef __EMSCRIPTEN__
-	nowColor.setHsb(getHue() * 255, x - mainWidth, 255 - y);
 #else
-	nowColor.setHsb(hue * 255, x - mainWidth, 255 - y);
+	colorPicker.pick(x, y);
+	pickedColor = colorPicker.getColor();
 #endif // __EMSCRIPTEN__
-
-	ofFill();
-	ofSetColor(nowColor);
-	ofDrawCircle(x, y, 10);
-
-	ofNoFill();
-	ofSetColor(150, 150, 150);
-	ofSetLineWidth(2);
-	ofDrawCircle(x, y, 10);
-
-	pickedColor = nowColor;
 }
 
 void Ui::placeUi(bool isPen) {
 
 #ifndef __EMSCRIPTEN__
-	hue.draw();
+	colorPicker.drawHueSlider();
 	if (isPen) {
 		penSize.draw();
 		penAlpha.draw();

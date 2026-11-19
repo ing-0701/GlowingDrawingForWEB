@@ -5,6 +5,7 @@
 
 #include "PaintLayer.h"
 #include "LayerFilter.h"
+#include "ColorPicker.h"
 
 #include <memory>
 #include <vector>
@@ -27,7 +28,6 @@ struct LayerUiAction {
 
 class Ui {
 public:
-	ofxFloatSlider hue;
 	ofxFloatSlider penSize;
 	ofxFloatSlider penAlpha;
 	ofxFloatSlider eraserSize;
@@ -36,8 +36,6 @@ public:
 	ofxButton undo;
 	ofxButton redo;
 	ofxButton deleteAll;
-	ofPixels pickerPix;
-	ofTexture pickerTex;
 	ofColor pickedColor;
 
 	Ui(int mainWidth);
@@ -45,7 +43,6 @@ public:
 	void picking(int x, int y, int mainWidth);
 
 	void placeUi(bool isPen);
-	float lastHue = -1.0f;
 	void drawLayerPanel(
 		const std::vector<std::unique_ptr<paintcore::Layer>> & layers,
 		int selectedLayerId,
@@ -87,4 +84,6 @@ private:
 	// マウスで押したレイヤー。0は押していない状態
 	int draggedLayerId = 0;
 	ofRectangle getLayerDeleteRect(int visibleRow) const;
+
+	paintcoreui::ColorPicker colorPicker;
 };

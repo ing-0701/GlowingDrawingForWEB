@@ -228,6 +228,7 @@
   <ItemGroup>
     <ClCompile Include="addons\ofxPaintCore\src\Brush.cpp" />
     <ClCompile Include="addons\ofxPaintCore\src\CanvasRenderer.cpp" />
+    <ClCompile Include="addons\ofxPaintCore\src\ColorPicker.cpp" />
     <ClCompile Include="addons\ofxPaintCore\src\PaintEngine.cpp" />
     <ClCompile Include="addons\ofxPaintCore\src\PaintLayer.cpp" />
     <ClCompile Include="addons\ofxPaintCore\src\StrokeSampler.cpp" />
@@ -251,6 +252,7 @@
   <ItemGroup>
     <ClInclude Include="addons\ofxPaintCore\src\Brush.h" />
     <ClInclude Include="addons\ofxPaintCore\src\CanvasRenderer.h" />
+    <ClInclude Include="addons\ofxPaintCore\src\ColorPicker.h" />
     <ClInclude Include="addons\ofxPaintCore\src\HistoryAction.h" />
     <ClInclude Include="addons\ofxPaintCore\src\HistoryManager.h" />
     <ClInclude Include="addons\ofxPaintCore\src\PaintEngine.h" />
