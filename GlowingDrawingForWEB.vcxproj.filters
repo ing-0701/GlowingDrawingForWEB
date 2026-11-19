@@ -64,6 +64,9 @@
     <ClCompile Include="src\NormalFilter.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="addons\ofxPaintCore\src\ColorPicker.cpp">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -162,6 +165,9 @@
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClInclude>
     <ClInclude Include="addons\ofxPaintCore\src\HistoryManager.h">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClInclude>
+    <ClInclude Include="addons\ofxPaintCore\src\ColorPicker.h">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClInclude>
   </ItemGroup>
