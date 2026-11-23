@@ -24,12 +24,14 @@ public:
 	void dragEvent(ofDragInfo dragInfo);
 	void gotMessage(ofMessage msg);
 	void beforeDeleteAll();
+    paintcore::BrushSettings readBrushSettings();
 
 	const static int mainWidth = 800;
 	const static int mainHeight = 600;
 
 	PaintTool paintTool = PaintTool(mainWidth, mainHeight);
 	ofPixels pixels;
+    ofColor brushColor = ofColor::black;
 
 	Ui ui = Ui(mainWidth);
 

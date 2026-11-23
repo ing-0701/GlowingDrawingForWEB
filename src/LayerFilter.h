@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ofMain.h"
+#include "LayerExtension.h"
 
 // このクラスは様々なフィルター以前の抽象クラス
 
@@ -11,7 +11,7 @@ enum class LayerType {
 };
 
 // 全てのフィルター共通の機能
-class LayerFilter {
+class LayerFilter : public paintcore::LayerExtension {
 	public :
 		virtual ~LayerFilter() = default;
 

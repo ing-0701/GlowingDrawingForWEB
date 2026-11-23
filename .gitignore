@@ -27,3 +27,5 @@ Thumbs.db
 
 # 補間方法の比較用ビルド
 /comparison/
+# PaintCore regression test binaries
+/bin/PaintCoreTests.*
