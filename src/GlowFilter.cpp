@@ -216,6 +216,7 @@ float GlowFilter::getPeriod() const {
 	return glowPeriod;
 }
 
+// スライダーの変更を受けて変数更新
 void GlowFilter::setParameters(float sigma, float strength, float period) {
 	sigma = std::clamp(sigma, 1.0f, 4.0f);
 	strength = std::clamp(strength, 1.5f, 7.5f);

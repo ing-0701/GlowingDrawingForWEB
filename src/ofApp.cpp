@@ -138,12 +138,6 @@ void ofApp::setup() {
 	ui.deleteAll.addListener(this, &ofApp::beforeDeleteAll);
 
 	paintTool.setup();
-	const int initialLayerId = paintTool.getSelectedLayerId();
-
-	ofLogNotice("Layers")
-		<< "Created Layer" << initialLayerId
-		<< ", count=" << paintTool.engine.getLayers().size()
-		<< ", selected=" << paintTool.getSelectedLayerId();
 
 #ifndef __EMSCRIPTEN__
 	ui.glowSigma.addListener(this, &ofApp::onGlowParameterChanged);
@@ -461,6 +455,8 @@ void ofApp::syncLayerStateToWeb() {
 	publishLayerState(text.c_str());
 }
 #else
+
+// Glowスライダーの表示処理
 void ofApp::syncGlowControls() {
 	GlowFilter * glow = paintTool.getSelectedGlowFilter();
 	const bool enabled = glow != nullptr;
@@ -500,6 +496,7 @@ void ofApp::syncGlowControls() {
 	syncingGlowControls = false;
 }
 
+// スライダーの更新を受けてパラメータ更新
 void ofApp::onGlowParameterChanged(float &) {
 	if (syncingGlowControls || paintTool.isDrawing()) {
 		return;

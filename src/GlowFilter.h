@@ -15,6 +15,7 @@ public:
 	float getStrength() const;
 	float getPeriod() const;
 
+	// スライダーの変更を受けて変数更新
 	void setParameters(float sigma, float strength, float period);
     ofJson saveState() const override {
         return {{"type", "Glow"}, {"sigma", glowSigma}, {"strength", glowStrength}, {"period", glowPeriod}};
