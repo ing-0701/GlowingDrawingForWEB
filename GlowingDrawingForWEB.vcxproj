@@ -229,8 +229,11 @@
     <ClCompile Include="addons\ofxPaintCore\src\Brush.cpp" />
     <ClCompile Include="addons\ofxPaintCore\src\CanvasRenderer.cpp" />
     <ClCompile Include="addons\ofxPaintCore\src\ColorPicker.cpp" />
+    <ClCompile Include="addons\ofxPaintCore\src\PaintSession.cpp" />
+    <ClCompile Include="addons\ofxPaintCore\src\PaintDocument.cpp" />
     <ClCompile Include="addons\ofxPaintCore\src\PaintEngine.cpp" />
     <ClCompile Include="addons\ofxPaintCore\src\PaintLayer.cpp" />
+    <ClCompile Include="addons\ofxPaintCore\src\PaintSettings.cpp" />
     <ClCompile Include="addons\ofxPaintCore\src\StrokeSampler.cpp" />
     <ClCompile Include="src\GlowFilter.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -255,8 +258,13 @@
     <ClInclude Include="addons\ofxPaintCore\src\ColorPicker.h" />
     <ClInclude Include="addons\ofxPaintCore\src\HistoryAction.h" />
     <ClInclude Include="addons\ofxPaintCore\src\HistoryManager.h" />
+    <ClInclude Include="addons\ofxPaintCore\src\PaintSession.h" />
+    <ClInclude Include="addons\ofxPaintCore\src\PaintEditor.h" />
+    <ClInclude Include="addons\ofxPaintCore\src\CanvasView.h" />
+    <ClInclude Include="addons\ofxPaintCore\src\LayerExtension.h" />
     <ClInclude Include="addons\ofxPaintCore\src\PaintEngine.h" />
     <ClInclude Include="addons\ofxPaintCore\src\PaintLayer.h" />
+    <ClInclude Include="addons\ofxPaintCore\src\PaintSettings.h" />
     <ClInclude Include="addons\ofxPaintCore\src\StrokeSampler.h" />
     <ClInclude Include="src\GlowFilter.h" />
     <ClInclude Include="src\LayerFilter.h" />

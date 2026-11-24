@@ -16,6 +16,10 @@ public:
 	float getPeriod() const;
 
 	void setParameters(float sigma, float strength, float period);
+    ofJson saveState() const override {
+        return {{"type", "Glow"}, {"sigma", glowSigma}, {"strength", glowStrength}, {"period", glowPeriod}};
+    }
+    bool supportsTransparentExport() const override { return false; }
 
 	static constexpr int MAX_BLUR_RADIUS = 32;
 

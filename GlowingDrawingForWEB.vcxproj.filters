@@ -67,6 +67,15 @@
     <ClCompile Include="addons\ofxPaintCore\src\ColorPicker.cpp">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClCompile>
+    <ClCompile Include="addons\ofxPaintCore\src\PaintSettings.cpp">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClCompile>
+    <ClCompile Include="addons\ofxPaintCore\src\PaintDocument.cpp">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClCompile>
+    <ClCompile Include="addons\ofxPaintCore\src\PaintSession.cpp">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -170,9 +179,21 @@
     <ClInclude Include="addons\ofxPaintCore\src\ColorPicker.h">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="icon.rc" />
+    <ClInclude Include="addons\ofxPaintCore\src\PaintSettings.h">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClInclude>
+    <ClInclude Include="addons\ofxPaintCore\src\CanvasView.h">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClInclude>
+    <ClInclude Include="addons\ofxPaintCore\src\LayerExtension.h">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClInclude>
+    <ClInclude Include="addons\ofxPaintCore\src\PaintEditor.h">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClInclude>
+    <ClInclude Include="addons\ofxPaintCore\src\PaintSession.h">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\data\shaders\glowBlur.frag">
@@ -211,5 +232,10 @@
     <None Include="bin\data\shaders\glowDownsampleWeb.vert">
       <Filter>src\shader</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="icon.rc">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

@@ -125,7 +125,6 @@ EM_JS(void, publishLayerState, (const char * jsonText), {
 #endif
 
 bool modelingFlag = false;
-bool drawingFlag = false;
 bool pickerFlag = false;
 
 //--------------------------------------------------------------
@@ -138,12 +137,13 @@ void ofApp::setup() {
 	ui.redo.addListener(&paintTool, &PaintTool::redo);
 	ui.deleteAll.addListener(this, &ofApp::beforeDeleteAll);
 
-	const int initialLayerId = paintTool.addLayer(LayerType::Normal, false);
+	paintTool.setup();
+	const int initialLayerId = paintTool.getSelectedLayerId();
 
 	ofLogNotice("Layers")
 		<< "Created Layer" << initialLayerId
 		<< ", count=" << paintTool.engine.getLayers().size()
-		<< ", selected=" << paintTool.selectedLayerId;
+		<< ", selected=" << paintTool.getSelectedLayerId();
 
 #ifndef __EMSCRIPTEN__
 	ui.glowSigma.addListener(this, &ofApp::onGlowParameterChanged);
@@ -167,7 +167,7 @@ void ofApp::update() {
 	}
 	// 上の内容ちゃんと理解してないからいつか確認して
 
-	if (drawingFlag) {
+	if (paintTool.isDrawing()) {
 		return;
 	}
 
@@ -189,7 +189,7 @@ void ofApp::update() {
 
 			// findLayerIndexで-1以外が返ってきたならちゃんと存在するID
 			if (paintTool.findLayerIndex(layerId) >= 0) {
-				paintTool.selectedLayerId = layerId;
+				paintTool.selectLayer(layerId);
 			}
 		} else if (command == 7) {
 			paintTool.deleteLayer(getPaintCommandLayerId());
@@ -220,6 +220,7 @@ void ofApp::update() {
 				}
 
 				glow->setParameters(sigma, strength, period);
+                paintTool.markDocumentChanged();
 			}
 		}
 
@@ -235,31 +236,12 @@ void ofApp::update() {
 //--------------------------------------------------------------
 void ofApp::draw() {
 #ifdef __EMSCRIPTEN__
-	ofBackground(ofColor::fromHex(getBackgroundColor()));
-	const bool isPen = getPenMode() != 0;
-
-	if (isPen) {
-		paintTool.strokeSize = getPenSize();
-	} else {
-		paintTool.strokeSize = getEraserSize();
-	}
-	paintTool.color = ofColor::fromHex(getPaintColor(), getPenAlpha() * 255);
-	if (drawingFlag) {
-		paintTool.drawLine(isPen, getEraserAlpha() * 255);
-	}
+	paintTool.setBackground(ofColor::fromHex(getBackgroundColor()));
+    ofBackground(paintTool.getBackground());
 #else
-	ofBackground(20);
+	paintTool.setBackground(ofColor(20));
+    ofBackground(paintTool.getBackground());
 	const bool isPen = ui.penSwitch;
-
-	if (isPen) {
-		paintTool.strokeSize = ui.penSize;
-	} else {
-		paintTool.strokeSize = ui.eraserSize;
-	}
-	paintTool.color = ofColor(paintTool.color.r, paintTool.color.g, paintTool.color.b, ui.penAlpha * 255);
-	if (drawingFlag) {
-		paintTool.drawLine(isPen, ui.eraserAlpha * 255);
-	}
 
 	ofSetColor(100);
 	ofDrawRectangle(mainWidth, 256, 256, ofGetHeight() - 256);
@@ -268,16 +250,16 @@ void ofApp::draw() {
 	ui.updatePicker(mainWidth);
 	if (pickerFlag) {
 		ui.picking(ofGetMouseX(), ofGetMouseY(), mainWidth);
-		paintTool.color = ui.pickedColor;
+		brushColor = ui.pickedColor;
 	}
 #endif // __EMSCRIPTEN__
 
-	paintTool.drawCanvas(drawingFlag);
+	paintTool.drawCanvas(paintTool.isDrawing());
 
 #ifndef __EMSCRIPTEN__
 	ui.drawLayerPanel(
 		paintTool.engine.getLayers(),
-		paintTool.selectedLayerId,
+		paintTool.getSelectedLayerId(),
 		[this](int layerId) {
 			return paintTool.getFilter(layerId).getType();
 		}
@@ -299,8 +281,8 @@ void ofApp::mouseMoved(int x, int y) {
 
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button) {
-	if (drawingFlag) {
-		paintTool.addStrokePoint(glm::vec2(x, y));
+	if (paintTool.isDrawing()) {
+		paintTool.pointerDragged(glm::vec2(x, y));
 	}
 }
 
@@ -311,12 +293,12 @@ void ofApp::mousePressed(int x, int y, int button) {
 	}
 
 #ifndef __EMSCRIPTEN__
-	if (!drawingFlag) {
+	if (!paintTool.isDrawing()) {
 		const LayerUiAction action = ui.pressLayerPanel(x, y, paintTool.engine.getLayers());
 
 		switch (action.type) {
 		case LayerUiActionType::Select:
-			paintTool.selectedLayerId = action.layerId;
+			paintTool.selectLayer(action.layerId);
 			return;
 
 		case LayerUiActionType::AddNormal:
@@ -343,8 +325,8 @@ void ofApp::mousePressed(int x, int y, int button) {
 
 	if (0 <= x && x < mainWidth && 0 <= y && y < mainHeight) {
 
-		paintTool.beginStroke(glm::vec2(x, y));
-		drawingFlag = true;
+        paintTool.setBrushSettings(readBrushSettings());
+        paintTool.pointerPressed(glm::vec2(x, y));
 	}
 
 #ifndef __EMSCRIPTEN__
@@ -373,31 +355,8 @@ void ofApp::mouseReleased(int x, int y, int button) {
 	}
 #endif
 
-	if (drawingFlag) {
-#ifdef __EMSCRIPTEN__
-		const bool isPen = getPenMode() != 0;
-		if (isPen) {
-			paintTool.strokeSize = getPenSize();
-		} else {
-			paintTool.strokeSize = getEraserSize();
-		}
-		paintTool.color = ofColor::fromHex(getPaintColor(), getPenAlpha() * 255);
-		paintTool.drawLine(isPen, getEraserAlpha() * 255);
-#else
-		const bool isPen = ui.penSwitch;
-		if (isPen) {
-			paintTool.strokeSize = ui.penSize;
-		} else {
-			paintTool.strokeSize = ui.eraserSize;
-		}
-		paintTool.color = ofColor(paintTool.color.r, paintTool.color.g, paintTool.color.b, ui.penAlpha * 255);
-		paintTool.drawLine(isPen, ui.eraserAlpha * 255);
-#endif
+    paintTool.pointerReleased();
 
-		paintTool.commitStroke();
-	}
-
-	drawingFlag = false;
 	pickerFlag = false;
 }
 
@@ -438,7 +397,7 @@ void ofApp::exit() {
 
 //--------------------------------------------------------------
 void ofApp::beforeDeleteAll() {
-	if (drawingFlag) {
+	if (paintTool.isDrawing()) {
 		return;
 	}
 
@@ -449,7 +408,7 @@ void ofApp::beforeDeleteAll() {
 void ofApp::mouseScrolled(
 	int x, int y, float scrollX, float scrollY) {
 #ifndef __EMSCRIPTEN__
-	if (drawingFlag) {
+	if (paintTool.isDrawing()) {
 		return;
 	}
 
@@ -473,7 +432,7 @@ void ofApp::mouseScrolled(
 // 要は選択中のレイヤーの情報をReactに教えるためのもの
 void ofApp::syncLayerStateToWeb() {
 	ofJson state;
-	state["selectedLayerId"] = paintTool.selectedLayerId;
+	state["selectedLayerId"] = paintTool.getSelectedLayerId();
 	state["layers"] = ofJson::array();
 
 	for (const auto & layer : paintTool.engine.getLayers()) {
@@ -536,17 +495,17 @@ void ofApp::syncGlowControls() {
 	ui.glowStrength = glow->getStrength();
 	ui.glowPeriod = glow->getPeriod();
 
-	glowControlsLayerId = paintTool.selectedLayerId;
+	glowControlsLayerId = paintTool.getSelectedLayerId();
 
 	syncingGlowControls = false;
 }
 
 void ofApp::onGlowParameterChanged(float &) {
-	if (syncingGlowControls || drawingFlag) {
+	if (syncingGlowControls || paintTool.isDrawing()) {
 		return;
 	}
 
-	if (glowControlsLayerId != paintTool.selectedLayerId) {
+	if (glowControlsLayerId != paintTool.getSelectedLayerId()) {
 		return;
 	}
 
@@ -560,5 +519,21 @@ void ofApp::onGlowParameterChanged(float &) {
 		ui.glowSigma,
 		ui.glowStrength,
 		ui.glowPeriod);
+    paintTool.markDocumentChanged();
 }
 #endif // __EMSCRIPTEN__
+
+paintcore::BrushSettings ofApp::readBrushSettings() {
+#ifdef __EMSCRIPTEN__
+    const bool pen = getPenMode() != 0;
+    return { static_cast<float>(pen ? getPenSize() : getEraserSize()),
+        ofColor::fromHex(getPaintColor(), getPenAlpha() * 255), pen,
+        static_cast<float>(getEraserAlpha() * 255) };
+#else
+    const bool pen = ui.penSwitch;
+    ofColor color = brushColor;
+    color.a = static_cast<unsigned char>(ui.penAlpha * 255);
+    return { pen ? static_cast<float>(ui.penSize) : static_cast<float>(ui.eraserSize),
+        color, pen, ui.eraserAlpha * 255 };
+#endif
+}
