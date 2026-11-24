@@ -23,6 +23,7 @@ public:
 	void windowResized(int w, int h);
 	void dragEvent(ofDragInfo dragInfo);
 	void gotMessage(ofMessage msg);
+
 	void beforeDeleteAll();
     paintcore::BrushSettings readBrushSettings();
 
@@ -40,13 +41,22 @@ public:
 		int y,
 		float scrollX,
 		float scrollY) override;
+
 #ifdef __EMSCRIPTEN__
 	void syncLayerStateToWeb();
 #else
+
+	// Glowスライダーの表示処理
 	void syncGlowControls();
+
+	// スライダーの更新を受けてパラメータ更新
 	void onGlowParameterChanged(float & value);
 
+	// スライダーの値をレイヤーごとの変数に同期している最中かの判定
 	bool syncingGlowControls = false;
+
+	// Glow関連スライダーの対象となってるレイヤー
 	int glowControlsLayerId = 0;
+
 #endif // __EMSCRIPTEN__
 };
