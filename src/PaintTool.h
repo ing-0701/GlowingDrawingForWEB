@@ -13,10 +13,7 @@ public:
     LayerFilter& getFilter(int layerId);
     GlowFilter* getGlowFilter(int layerId);
     GlowFilter* getSelectedGlowFilter();
-    // Keep GlowingDrawing's existing behavior: reordering is not an Undo step.
-    void moveLayer(int id, int index) { PaintSession::moveLayer(id, index, false); }
     void newDocument() { PaintSession::newDocument(std::make_unique<NormalFilter>()); }
-    bool loadProject(const std::string& path);
 
     // Concrete member wrappers also keep ofxGui's listener member-pointer types unchanged.
     void undo() { PaintSession::undo(); }

@@ -6,6 +6,8 @@
 #include "PaintLayer.h"
 #include "LayerFilter.h"
 #include "ColorPicker.h"
+#include "BrushControls.h"
+#include "LayerList.h"
 
 #include <memory>
 #include <vector>
@@ -28,10 +30,7 @@ struct LayerUiAction {
 
 class Ui {
 public:
-	ofxFloatSlider penSize;
-	ofxFloatSlider penAlpha;
-	ofxFloatSlider eraserSize;
-	ofxFloatSlider eraserAlpha;
+	paintcoreui::BrushControls brushControls;
 	ofxToggle penSwitch;
 	ofxButton undo;
 	ofxButton redo;
@@ -65,25 +64,36 @@ public:
 	ofxFloatSlider glowStrength;
 	ofxFloatSlider glowPeriod;
 
+	ofxButton backgroundButton;
+	paintcoreui::ColorPicker backgroundPicker;
+
+	bool backgroundPickerVisible = false;
+	bool backgroundPicking = false;
+
+	ofColor getBackgroundColor() const;
+	bool isBackgroundPicking() const;
+	bool beginBackgroundPicking(int x, int y);
+	void dragBackgroundPicking(int x, int y);
+	void endBackgroundPicking();
+	void updateBackgroundPicker();
+
+	void toggleBackgroundPicker();
+
 	bool glowControlsEnabled = false;
 #endif // __EMSCRIPTEN__
 
 
 private:
 	ofRectangle layerAddRect;
-	ofRectangle layerListRect;
 
     bool layerMenuOpen = false;
-	int firstVisibleLayer = 0;
 
 	static constexpr int visibleLayerCount = 4;
 	static constexpr float layerRowHeight = 46.0f;
 
 	ofRectangle getLayerRowRect(int visibleRow) const;
-
-	// マウスで押したレイヤー。0は押していない状態
-	int draggedLayerId = 0;
 	ofRectangle getLayerDeleteRect(int visibleRow) const;
 
 	paintcoreui::ColorPicker colorPicker;
+	paintcoreui::LayerList layerList;
 };

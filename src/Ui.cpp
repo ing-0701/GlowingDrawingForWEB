@@ -6,31 +6,29 @@ Ui::Ui(int mainWidth) {
 	ofxGuiSetDefaultHeight(10);
 
 #ifndef __EMSCRIPTEN__
+	const float actionX = static_cast<float>(mainWidth);
+	const float actionWidth = 100.0f;
+	const float controlsX = static_cast<float>(mainWidth + 104);
+	const float controlsWidth = 148.0f;
+
 	colorPicker.setup(mainWidth, 0);
-	penSize.setup("penSize", 0.1, 0.05, 1.0);
-	penSize.setSize(256, 30);
-	penSize.setPosition(mainWidth, 258 + 32 * 1);
+
+	brushControls.setup(
+		controlsX,
+		290.0f,
+		controlsWidth);
 	penSwitch.setup("pen/eraser", true);
 	penSwitch.setSize(100, 30);
-	penSwitch.setPosition(mainWidth, 258 + 32 * 4);
-	penAlpha.setup("penAlpha", 1.0, 0.01, 1.0);
-	penAlpha.setSize(256, 30);
-	penAlpha.setPosition(mainWidth, 258 + 32 * 2);
-	eraserSize.setup("eraserSize", 0.1, 0.05, 1.0);
-	eraserSize.setSize(256, 30);
-	eraserSize.setPosition(mainWidth, 258 + 32 * 1);
-	eraserAlpha.setup("eraserAlpha", 1.0, 0.01, 1.0);
-	eraserAlpha.setSize(256, 30);
-	eraserAlpha.setPosition(mainWidth, 258 + 32 * 2);
+	penSwitch.setPosition(actionX, 290.0f);
 	undo.setup("undo");
 	undo.setSize(100, 30);
-	undo.setPosition(mainWidth, 258 + 32 * 5);
+	undo.setPosition(actionX, 322.0f);
 	redo.setup("redo");
 	redo.setSize(100, 30);
-	redo.setPosition(mainWidth, 258 + 32 * 6);
+	redo.setPosition(actionX, 354.0f);
 	deleteAll.setup("delete");
 	deleteAll.setSize(100, 30);
-	deleteAll.setPosition(mainWidth, 258 + 32 * 7);
+	deleteAll.setPosition(actionX, 386.0f);
 	glowSigma.setup("sigma", 2.5f, 1.0f, 4.0f);
 	glowSigma.setSize(256, 30);
 	glowSigma.setPosition(mainWidth, 606);
@@ -40,6 +38,14 @@ Ui::Ui(int mainWidth) {
 	glowPeriod.setup("period", 1.0f, 0.3f, 3.0f);
 	glowPeriod.setSize(256, 30);
 	glowPeriod.setPosition(mainWidth, 670);
+	backgroundButton.setup("background");
+	backgroundButton.setSize(actionWidth, 30.0f);
+	backgroundButton.setPosition(actionX, 418.0f);
+	backgroundButton.addListener(this, &Ui::toggleBackgroundPicker);
+
+	backgroundPicker.setup(actionX, 452.0f, actionWidth);
+	backgroundPicker.setColor(ofColor(20));
+	backgroundPicker.setEnabled(false);
 
 	// 起動時はNormalレイヤーなので、操作を受け付けない
 	glowSigma.unregisterMouseEvents();
@@ -51,10 +57,50 @@ Ui::Ui(int mainWidth) {
 		mainWidth + 104, 354,
 		148, 28);
 
-	layerListRect.set(
+	layerList.setup(
 		mainWidth + 104, 386,
-		148, layerRowHeight * visibleLayerCount);
+		148, layerRowHeight, visibleLayerCount);
 }
+
+#ifndef __EMSCRIPTEN__
+void Ui::toggleBackgroundPicker() {
+	backgroundPickerVisible = !backgroundPickerVisible;
+	backgroundPicker.setEnabled(backgroundPickerVisible);
+}
+
+ofColor Ui::getBackgroundColor() const {
+	return backgroundPicker.getColor();
+}
+
+bool Ui::isBackgroundPicking() const {
+	return backgroundPicking;
+}
+
+bool Ui::beginBackgroundPicking(int x, int y) {
+	if (!backgroundPickerVisible || !backgroundPicker.contains(x, y)) {
+		return false;
+	}
+
+	backgroundPicking = true;
+	backgroundPicker.select(x, y);
+	return true;
+}
+
+void Ui::dragBackgroundPicking(int x, int y) {
+	if (backgroundPicking) {
+		backgroundPicker.select(x, y);
+	}
+}
+
+void Ui::endBackgroundPicking() {
+	backgroundPicking = false;
+}
+
+void Ui::updateBackgroundPicker() {
+	backgroundPicker.update();
+}
+
+#endif // !__EMSCRIPTEN__
 
 void Ui::updatePicker(int mainWidth) {
 #ifdef __EMSCRIPTEN__
@@ -75,17 +121,19 @@ void Ui::placeUi(bool isPen) {
 
 #ifndef __EMSCRIPTEN__
 	colorPicker.drawHueSlider();
-	if (isPen) {
-		penSize.draw();
-		penAlpha.draw();
-	} else {
-		eraserSize.draw();
-		eraserAlpha.draw();
-	}
+	brushControls.draw(isPen);
 	penSwitch.draw();
 	undo.draw();
 	redo.draw();
 	deleteAll.draw();
+	backgroundButton.draw();
+
+	if (backgroundPickerVisible) {
+		backgroundPicker.drawPicker();
+		backgroundPicker.drawSelection();
+		backgroundPicker.drawHueSlider();
+	}
+
 	if (glowControlsEnabled) {
 		glowSigma.draw();
 		glowStrength.draw();
@@ -97,25 +145,14 @@ void Ui::placeUi(bool isPen) {
 // レイヤーの矩形を得る関数
 // 引数は「上から何個目の矩形か」の数字で、それに応じた位置を得る
 ofRectangle Ui::getLayerRowRect(int visibleRow) const {
-	return ofRectangle(
-		layerListRect.x,
-		layerListRect.y + visibleRow * layerRowHeight,
-		layerListRect.width,
-		layerRowHeight);
+	return layerList.rowRect(visibleRow);
 }
 
 void Ui::drawLayerPanel(
 	const std::vector<std::unique_ptr<paintcore::Layer>> & layers,
 	int selectedLayerId,
 	const std::function<LayerType(int)> & getLayerType) {
-	const int maxFirst = std::max(
-		0,
-		static_cast<int>(layers.size()) - visibleLayerCount);
-
-	firstVisibleLayer = std::clamp(
-		firstVisibleLayer,
-		0,
-		maxFirst);
+	layerList.clampScroll(static_cast<int>(layers.size()));
 
 	ofPushStyle();
 
@@ -134,7 +171,7 @@ void Ui::drawLayerPanel(
 
 	// 一覧の背景
 	ofSetColor(35);
-	ofDrawRectangle(layerListRect);
+	ofDrawRectangle(layerList.bounds());
 
 	if (layerMenuOpen) {
 		// メニューを開いている間は、一覧の代わりに選択肢を表示
@@ -157,7 +194,7 @@ void Ui::drawLayerPanel(
 			glowRect.y + 27);
 	} else {
 		for (int row = 0; row < visibleLayerCount; ++row) {
-			const int index = firstVisibleLayer + row;
+			const int index = layerList.firstVisibleIndex() + row;
 
 			if (index >= static_cast<int>(layers.size())) {
 				break;
@@ -223,7 +260,7 @@ LayerUiAction Ui::pressLayerPanel(
 	LayerUiAction action;
 
 	// 新しいクリックの開始時にリセットする
-	draggedLayerId = 0;
+	layerList.cancelDrag();
 
 	// ＋ボタンでメニューを開閉
 	if (layerAddRect.inside(x, y)) {
@@ -245,7 +282,7 @@ LayerUiAction Ui::pressLayerPanel(
 
 	// 一覧の行をクリック
 	for (int row = 0; row < visibleLayerCount; ++row) {
-		const int index = firstVisibleLayer + row;
+		const int index = layerList.firstVisibleIndex() + row;
 
 		if (index >= static_cast<int>(layers.size())) {
 			break;
@@ -264,7 +301,7 @@ LayerUiAction Ui::pressLayerPanel(
 			action.type = LayerUiActionType::Select;
 			action.layerId = layers[index]->id;
 
-			draggedLayerId = action.layerId;
+			layerList.beginDrag(action.layerId);
 
 			return action;
 		}
@@ -277,37 +314,18 @@ LayerUiAction Ui::releaseLayerPanel(
 	int x,
 	int y,
 	int layerCount) {
+
 	LayerUiAction action;
 
-	// 押していたレイヤーを取り出し、ドラッグ状態を解除する
-	const int layerId = draggedLayerId;
-	draggedLayerId = 0;
+	const auto request = layerList.endDrag(x, y, layerCount);
 
-	// レイヤーの行から始まった操作でなければ何もしない
-	if (layerId == 0) {
-		return action;
-	}
-
-	// 一覧の外で離した場合は、並べ替えを取り消す
-	if (!layerListRect.inside(x, y)) {
-		return action;
-	}
-
-	// 一覧の上から何行目で離したか
-	const int row = static_cast<int>(
-		(y - layerListRect.y) / layerRowHeight);
-
-	// スクロール位置を加え、配列全体での位置に変換する
-	const int destinationIndex = firstVisibleLayer + row;
-
-	// レイヤーが存在しない空白部分なら何もしない
-	if (destinationIndex >= layerCount) {
+	if (request.layerId == 0) {
 		return action;
 	}
 
 	action.type = LayerUiActionType::Move;
-	action.layerId = layerId;
-	action.destinationIndex = destinationIndex;
+	action.layerId = request.layerId;
+	action.destinationIndex = request.destinationIndex;
 
 	return action;
 }
@@ -317,15 +335,7 @@ void Ui::scrollLayerPanel(float scrollY, int layerCount) {
 		return;
 	}
 
-	if (scrollY > 0) {
-		--firstVisibleLayer;
-	} else if (scrollY < 0) {
-		++firstVisibleLayer;
-	}
-
-	const int maxFirst = std::max(0, layerCount - visibleLayerCount);
-
-	firstVisibleLayer = std::clamp(firstVisibleLayer, 0, maxFirst);
+	layerList.scroll(scrollY, layerCount);
 }
 
 ofRectangle Ui::getLayerDeleteRect(int visibleRow) const {

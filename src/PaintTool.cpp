@@ -28,16 +28,3 @@ GlowFilter* PaintTool::getGlowFilter(int layerId) {
 GlowFilter* PaintTool::getSelectedGlowFilter() {
     return getGlowFilter(getSelectedLayerId());
 }
-
-bool PaintTool::loadProject(const std::string& path) {
-    return PaintSession::loadProject(path, [](const ofJson& state) -> std::unique_ptr<paintcore::LayerExtension> {
-        const auto type = state.at("type").get<std::string>();
-        if (type == "Normal") return std::make_unique<NormalFilter>();
-        if (type == "Glow") {
-            auto glow = std::make_unique<GlowFilter>();
-            glow->setParameters(state.at("sigma"), state.at("strength"), state.at("period"));
-            return glow;
-        }
-        return nullptr;
-    });
-}

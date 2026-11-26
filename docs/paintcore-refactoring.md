@@ -37,12 +37,11 @@ WindowsのUi           ReactのofViewer.tsx
 | PaintEngine.h / .cpp | レイヤー画像、ストローク用画像、途中保存、ブラシ描画 |
 | StrokeSampler.h / .cpp | 入力された点からベジェ曲線をたどり、スタンプ位置を決める |
 | Brush.h / .cpp | 各スタンプ位置で円や画像を描く。ペン／消しゴムの合成も担当 |
-| PaintLayer.h / .cpp | ID、名前、画像、位置、不透明度など1枚分のデータ |
-| CanvasRenderer.h / .cpp | レイヤーの描画順、表示位置、プレビュー画像の選択 |
+| PaintLayer.h / .cpp | ID、名前、キャンバス画像など1枚分のデータ |
+| CanvasRenderer.h / .cpp | レイヤーの描画順とプレビュー画像の選択 |
 | LayerExtension.h | 各アプリが独自表示・独自データを追加する接続口 |
 | HistoryAction.h | UndoとRedoを実装するための抽象クラス |
 | HistoryManager.h | 履歴の順番、上限、Undo/Redoの位置を管理 |
-| PaintDocument.cpp | レイヤーを保持する保存・読み込み、PNG書き出し |
 | CanvasView.h | 表示位置・倍率と入力座標の変換 |
 | ColorPicker.h / .cpp | 任意で使えるoF用の色選択部品 |
 | PaintEditor.h | 基本機能を接続済みのofxGui UI |
@@ -67,7 +66,7 @@ GlowingDrawingの `PaintTool::setup()` は、この入口にNormalFilterを渡�
 
 Webでは `readBrushSettings()` がiframe内の `window.paintColor`、`window.paintPenSize` などを読みます。WindowsではUiのスライダーと `brushColor` を読みます。どちらも最後は同じ `BrushSettings` になります。
 
-`pointerPressed(position)` は、キャンバス内か、すでに描画中でないか、レイヤーが描画可能かを確認します。そのうえで選択中レイヤーIDをストロークの対象として記録し、その時点のブラシ設定を `activeBrush` にコピーします。
+`pointerPressed(position)` は、キャンバス内か、すでに描画中でないかを確認します。そのうえで選択中レイヤーIDをストロークの対象として記録し、その時点のブラシ設定を `activeBrush` にコピーします。
 
 設定のコピーは、この線が途中で別のレイヤーや別のブラシ設定へ変わらないためです。次の線を描き始めれば、新しいスライダー値が使われます。
 
@@ -91,8 +90,6 @@ PaintSessionは、必要なら最後のドラッグまでをプレビューへ�
 
 この順番により、描き始めとリリースの間にdrawが呼ばれなかった場合でも線を確定できます。また、履歴へ保存されるのは線を描き込む前の画像です。
 
-`cancelStroke()` は確定済み画像を変更せず、プレビューを使う状態を解除します。途中保存のために分割された画像もレイヤー本体へは転写しません。Undoを一件消費せず、既存のRedoも残ります。
-
 ## レイヤーと発光処理の分離
 
 `Layer` にフィルターのメンバはありません。PaintSessionの `extensions` が「ID → LayerExtensionのオブジェクト」を保持します。GlowingDrawingのLayerFilterは、このLayerExtensionを継承します。さらにNormalFilterとGlowFilterがLayerFilterを継承します。
@@ -103,7 +100,7 @@ NormalFilterは画像を通常合成します。GlowFilterは既存の縮小・�
 
 CanvasRendererは配列を末尾から先頭へたどります。したがって一覧の先頭ほど手前に表示されます。描画中の対象レイヤーだけは確定画像の代わりにプレビューを渡します。ほかのレイヤーには、それぞれの確定画像を渡します。
 
-表示位置を動的に変える拡張には `setLayerPlacement()` があります。将来、視点に応じて位置を変えるアプリでは、ここへ計算関数を渡せます。表示用の移動なので履歴を増やしません。編集入力もその位置に合わせる場合は、アプリ側で対応する逆変換を行います。
+PaintCoreのLayerは位置・表示状態・不透明度を持ちません。これらが必要なアプリでは、そのアプリが表示と入力座標の変換を管理します。通常のズーム・パンには `CanvasView` を利用できます。
 
 ## レイヤー操作と選択
 
@@ -136,7 +133,7 @@ SessionHistoryEntryには標準の種類があります。
 
 `prepare()` は別の作業枠を用意し、`finish()` が成功した操作をリングバッファへ確定します。Redoの破棄もfinishで行います。準備しただけでRedoを失うことを避ける構成です。そのため履歴件数分とは別に、作業用画像が1枚あります。
 
-共通コアの並べ替え・名前・表示・不透明度・ロック・位置変更も履歴へ記録できます。GlowingDrawingの並べ替えは従来の仕様を維持し、PaintToolのラッパーが `recordHistory=false` を渡します。発光スライダーの変更も従来どおりUndoの対象に追加していません。
+レイヤーの追加・削除と描画内容は履歴に記録されます。並べ替えは `moveLayer()` が配列順を変更しますが、Undo/Redoには入りません。Glowスライダーの値もGlowingDrawing側の設定であり、Undo対象ではありません。
 
 ## Reactとの通信
 
@@ -148,7 +145,7 @@ UI操作は `paintCommands` に入り、ofAppのupdateが順に取り出しま�
 
 戻りの `paintLayerState` は、引き続き `selectedLayerId` と `layers` を含みます。各要素の `id`、`name`、`type`、`glow` と、Glow内の `sigma`、`strength`、`period` も維持しています。
 
-録画はこれまでどおりiframe内のcanvasをReactが取り出して行います。今回のプロジェクト保存APIと、既存のSaveボタンによる動画保存は別の機能です。Saveボタンの6秒録画・送信・MP4変換・QRコード発行の処理は変更していません。
+録画はこれまでどおりiframe内のcanvasをReactが取り出して行います。Saveボタンの6秒録画・送信・MP4変換・QRコード発行はGlowingDrawing側の機能で、PaintCoreは関与しません。
 
 ## 新しいアプリを作る場合
 
@@ -160,21 +157,13 @@ UI操作は `paintCommands` に入り、ofAppのupdateが順に取り出しま�
 
 独自操作のUndoは `HistoryAction<PaintSession>` を継承して実装し、操作が成功した後で `recordAction()` に渡します。コアの内部フィールドを無理に外へ公開する必要はありません。
 
-## 保存と適用範囲
-
-プロジェクト保存は画像のfloat32値とレイヤー情報を保持します。履歴・ブラシ設定は保存しません。読み込みは現在と同じキャンバス寸法に限定しています。異なるサイズへ自動でリサイズすることはありません。
-
-通常画像の透明PNGでは、乗算済みRGBを通常のRGBへ戻して8bit化します。加算発光は透明PNG単体では同じ見え方を保証できないので、Glowが表示されている場合は背景込みのPNGを使います。GlowingDrawingのSaveボタンには、これらの新APIを接続していません。
-
-`hasUnsavedChanges()` は保存後に変更があったかを保守的に示します。Undoで保存時と完全に一致したかを画像比較する機能ではありません。
-
 付属UIは基本のペイント操作を接続済みですが、GlowingDrawingのUIを置き換えてはいません。新しいアプリで任意に採用する部品です。市松模様、ブラシカーソル、GPUメモリ全体の自動上限管理は今回追加していません。
 
 共通コアの変更を他のアプリへ届けるには、ofxPaintCoreのコミットを更新し、各アプリのサブモジュール参照を更新して再ビルドします。現在の変更はまだコミット・pushしていません。
 
 ## 検証と手動確認
 
-ターミナルでの回帰テストは `tests/run-windows.ps1 -Run` から実行します。OpenGLコンテキストを作り、FBOを読み戻して通常描画、透明消しゴム、全消し、レイヤー追加／削除、Undo/Redo、履歴上限、保存復元を確認します。テスト結果は `obj/paintcore-tests/paintcore-test-result.txt` です。
+ターミナルでの回帰テストは `tests/run-windows.ps1 -Run` から実行します。OpenGLコンテキストを作り、FBOを読み戻して通常描画、透明消しゴム、全消し、レイヤー追加／削除、Undo/Redo、履歴上限を確認します。テスト結果は `obj/paintcore-tests/paintcore-test-result.txt` です。
 
 旧来のEngine呼び出しと新しいSessionの入口へ同じ入力を与え、全テクセルの値を比較するテストもあります。これは同じ入力に対する画像の互換性を調べるもので、液タブの実入力、操作感、ノートPCのフレームレートを測るものではありません。
 
