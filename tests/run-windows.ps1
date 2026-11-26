@@ -6,6 +6,8 @@ $project = Join-Path $repo 'PaintCoreTests.generated.vcxproj'
 if (Test-Path -LiteralPath $project) { throw "Temporary project already exists: $project" }
 try {
     $xml = [System.IO.File]::ReadAllText((Join-Path $repo 'GlowingDrawingForWEB.vcxproj'))
+    # The source project may already list this test. Replace main with exactly one copy.
+    $xml = $xml.Replace('<ClCompile Include="tests\paintcore_tests.cpp" />', '')
     $xml = $xml.Replace('Include="src\main.cpp"', 'Include="tests\paintcore_tests.cpp"')
     $xml = $xml.Replace('<IntDir>obj\$(Platform)\$(Configuration)\</IntDir>', '<IntDir>obj\PaintCoreTests\</IntDir>')
     $xml = $xml.Replace('<TargetName>$(ProjectName)_debug</TargetName>', '<TargetName>PaintCoreTests</TargetName>')

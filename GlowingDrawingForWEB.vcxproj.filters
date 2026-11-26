@@ -70,9 +70,6 @@
     <ClCompile Include="addons\ofxPaintCore\src\PaintSettings.cpp">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClCompile>
-    <ClCompile Include="addons\ofxPaintCore\src\PaintDocument.cpp">
-      <Filter>addons\ofxPaintCore\src</Filter>
-    </ClCompile>
     <ClCompile Include="addons\ofxPaintCore\src\PaintSession.cpp">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClCompile>
@@ -98,6 +95,9 @@
     </Filter>
     <Filter Include="src\shader">
       <UniqueIdentifier>{7c6e191b-e24d-4a81-b3bd-67ba95b5cbaa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="tests">
+      <UniqueIdentifier>{258127b6-2509-42fa-acb3-130d3468f33e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -192,6 +192,12 @@
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClInclude>
     <ClInclude Include="addons\ofxPaintCore\src\PaintSession.h">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClInclude>
+    <ClInclude Include="addons\ofxPaintCore\src\BrushControls.h">
+      <Filter>addons\ofxPaintCore\src</Filter>
+    </ClInclude>
+    <ClInclude Include="addons\ofxPaintCore\src\LayerList.h">
       <Filter>addons\ofxPaintCore\src</Filter>
     </ClInclude>
   </ItemGroup>

@@ -214,7 +214,6 @@ void ofApp::update() {
 				}
 
 				glow->setParameters(sigma, strength, period);
-                paintTool.markDocumentChanged();
 			}
 		}
 
@@ -233,8 +232,9 @@ void ofApp::draw() {
 	paintTool.setBackground(ofColor::fromHex(getBackgroundColor()));
     ofBackground(paintTool.getBackground());
 #else
-	paintTool.setBackground(ofColor(20));
-    ofBackground(paintTool.getBackground());
+	ui.updateBackgroundPicker();
+	paintTool.setBackground(ui.getBackgroundColor());
+	ofBackground(paintTool.getBackground());
 	const bool isPen = ui.penSwitch;
 
 	ofSetColor(100);
@@ -275,6 +275,13 @@ void ofApp::mouseMoved(int x, int y) {
 
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button) {
+#ifndef __EMSCRIPTEN__
+	if (ui.isBackgroundPicking()) {
+		ui.dragBackgroundPicking(x, y);
+		return;
+	}
+#endif
+
 	if (paintTool.isDrawing()) {
 		paintTool.pointerDragged(glm::vec2(x, y));
 	}
@@ -315,6 +322,10 @@ void ofApp::mousePressed(int x, int y, int button) {
 			break;
 		}
 	}
+
+	if (ui.beginBackgroundPicking(x, y)) {
+		return;
+	}
 #endif
 
 	if (0 <= x && x < mainWidth && 0 <= y && y < mainHeight) {
@@ -347,6 +358,8 @@ void ofApp::mouseReleased(int x, int y, int button) {
 			action.layerId,
 			action.destinationIndex);
 	}
+
+	ui.endBackgroundPicking();
 #endif
 
     paintTool.pointerReleased();
@@ -516,21 +529,32 @@ void ofApp::onGlowParameterChanged(float &) {
 		ui.glowSigma,
 		ui.glowStrength,
 		ui.glowPeriod);
-    paintTool.markDocumentChanged();
 }
 #endif // __EMSCRIPTEN__
 
 paintcore::BrushSettings ofApp::readBrushSettings() {
+	// UIで変更しない設定は、現在の値を引き継ぐ。
+	auto settings = paintTool.getBrushSettings();
+
 #ifdef __EMSCRIPTEN__
-    const bool pen = getPenMode() != 0;
-    return { static_cast<float>(pen ? getPenSize() : getEraserSize()),
-        ofColor::fromHex(getPaintColor(), getPenAlpha() * 255), pen,
-        static_cast<float>(getEraserAlpha() * 255) };
+	settings.isPen = getPenMode() != 0;
+
+	settings.size = static_cast<float>(getPenSize());
+
+	settings.eraserSize = static_cast<float>(getEraserSize());
+
+	settings.color = ofColor::fromHex(
+		getPaintColor(),
+		getPenAlpha() * 255);
+
+	settings.eraserAlpha = static_cast<float>(getEraserAlpha() * 255);
+
 #else
-    const bool pen = ui.penSwitch;
-    ofColor color = brushColor;
-    color.a = static_cast<unsigned char>(ui.penAlpha * 255);
-    return { pen ? static_cast<float>(ui.penSize) : static_cast<float>(ui.eraserSize),
-        color, pen, ui.eraserAlpha * 255 };
+	settings.isPen = ui.penSwitch;
+	settings.color = brushColor;
+
+	ui.brushControls.applyTo(settings);
 #endif
+
+	return settings;
 }
